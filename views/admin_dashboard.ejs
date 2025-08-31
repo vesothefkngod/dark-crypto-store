@@ -2,55 +2,66 @@
 <html lang="bg">
 <head>
   <meta charset="UTF-8">
-  <title>Admin Dashboard</title>
-  <link rel="stylesheet" href="/style.css">
+  <title>💀 Admin Panel</title>
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <div class="container">
-    <div class="topbar">
-      <h1>Админ – Табло</h1>
-      <div>Здравей, <b><%= admin.username %></b> | <a href="/admin/logout">Изход</a></div>
-    </div>
+  <header>
+    <h1>💀 ADMIN DASHBOARD</h1>
+    <p>👤 Потребители: <%= userStats.total_users %> | 📦 Поръчки: <%= stats.total_orders %> | 💰 Приходи: $<%= stats.total_revenue.toFixed(2) %></p>
+  </header>
 
-    <h2>Добави продукт</h2>
-    <form method="POST" action="/admin/product/add">
-      <label>Име</label><input name="name" required>
-      <label>Описание</label><textarea name="description"></textarea>
-      <label>Цена</label><input name="price" type="number" step="0.01" required>
-      <label>Image URL</label><input name="image" placeholder="https://...">
-      <button type="submit">Запази</button>
-    </form>
-
-    <h2>Продукти</h2>
-    <table class="table">
-      <tr><th>ID</th><th>Име</th><th>Цена</th><th></th></tr>
+  <section>
+    <h2>📦 Продукти</h2>
+    <table>
+      <tr><th>Име</th><th>Цена</th><th>Наличност</th><th>Категория</th><th>Действия</th></tr>
       <% products.forEach(p => { %>
         <tr>
-          <td><%= p.id %></td>
           <td><%= p.name %></td>
-          <td><%= p.price.toFixed(2) %></td>
+          <td>лв.<%= p.price.toFixed(2) %></td>
+          <td><%= p.stock %></td>
+          <td><%= p.category %></td>
           <td>
-            <form method="POST" action="/admin/product/delete/<%= p.id %>" onsubmit="return confirm('Да изтрия ли продукта?')">
-              <button type="submit">Изтрий</button>
+            <form method="POST" action="/admin/product/update/<%= p.id %>">
+              <input type="text" name="name" value="<%= p.name %>" required />
+              <input type="number" name="price" value="<%= p.price %>" step="0.01" required />
+              <input type="number" name="stock" value="<%= p.stock %>" required />
+              <input type="text" name="category" value="<%= p.category %>" />
+              <button type="submit">💾 Запази</button>
             </form>
           </td>
         </tr>
       <% }) %>
     </table>
 
-    <h2>Поръчки</h2>
-    <table class="table">
-      <tr><th>ID</th><th>Продукт</th><th>Цена</th><th>Статус</th><th>Създадена</th></tr>
+    <h3>➕ Добави нов продукт</h3>
+    <form method="POST" action="/admin/product/create">
+      <input type="text" name="name" placeholder="Име" required />
+      <input type="text" name="description" placeholder="Описание" />
+      <input type="number" name="price" placeholder="Цена" step="0.01" required />
+      <input type="number" name="stock" placeholder="Наличност" required />
+      <input type="text" name="category" placeholder="Категория" />
+      <input type="text" name="image" placeholder="URL на изображение" />
+      <label><input type="checkbox" name="featured" /> Featured</label>
+      <button type="submit">✅ Създай</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>📜 Последни поръчки</h2>
+    <table>
+      <tr><th>ID</th><th>Потребител</th><th>Продукт</th><th>Сума</th><th>Статус</th><th>Дата</th></tr>
       <% orders.forEach(o => { %>
         <tr>
           <td><%= o.id %></td>
+          <td><%= o.username %></td>
           <td><%= o.product_name %></td>
-          <td><%= o.price.toFixed(2) %></td>
-          <td><%= o.status %></td>
+          <td>$<%= o.total_amount.toFixed(2) %></td>
+          <td><%= o.payment_status %></td>
           <td><%= o.created_at %></td>
         </tr>
       <% }) %>
     </table>
-  </div>
+  </section>
 </body>
 </html>
