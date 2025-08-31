@@ -137,6 +137,12 @@
             text-shadow: 0 0 10px #00ff00;
             animation: pulse 2s infinite;
         }
+.logo-img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 5px #00ff00);
+}
 
         @keyframes pulse {
             0%, 100% { opacity: 1; }
