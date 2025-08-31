@@ -41,15 +41,6 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Платежна конфигурация само за WolvPay
-const CRYPTO_CONFIG = {
-  wolvpay: {
-    merchantKey: 'wlov_live_70b44b3fb1bc51c5f3c2f4757904e7e3',
-    webhookSecret: 'd3787bd178d9c2e0f65ba61d4a1b28c6339142e2cd480552919bca40c32ae5ec',
-    apiUrl: 'https://api.wolvpay.com'
-  }
-};
-
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
