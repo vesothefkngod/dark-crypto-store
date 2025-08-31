@@ -6,19 +6,19 @@ const axios = require('axios');
 const CRYPTO_CONFIG = {
   wolvpay: {
     apiUrl: process.env.WOLVPAY_API_URL,
-    merchantKey: process.env.WOLVPAY_MERCHANT_KEY
+    merchantKey: process.env.WOLVPAY_MERCHANT_KEY,
+    webhookSecret: process.env.WOLVPAY_WEBHOOK_SECRET
   }
 };
-
 async function createWolvPayInvoice(orderId, amount, currency, description, req) {
   const payload = {
-    merchant: CRYPTO_CONFIG.wolvpay.merchantKey,
+    merchant:    CRYPTO_CONFIG.wolvpay.merchantKey,
     invoiceValue: amount,
-    currency: currency,
-    description: description,
-    callbackUrl: `${req.protocol}://${req.get('host')}/webhook/wolvpay`,
-    returnUrl:  `${req.protocol}://${req.get('host')}/payment-success?order=${orderId}`,
-    lifetime: 30
+    currency:     currency,
+    description:  description,
+    callbackUrl:  `${req.protocol}://${req.get('host')}/webhook/wolvpay`,
+    returnUrl:    `${req.protocol}://${req.get('host')}/payment-success?order=${orderId}`,
+    lifetime:     30
   };
 
   const response = await axios.post(
@@ -26,13 +26,12 @@ async function createWolvPayInvoice(orderId, amount, currency, description, req)
     payload
   );
 
-  // Върни данните за плащане към маршрута
   return {
-    paymentId:   response.data.invoiceId,
-    paymentUrl:  response.data.paymentUrl,
-    address:     response.data.address,
-    cryptoAmount:response.data.cryptoAmount,
-    qrCode:      response.data.qrCode
+    paymentId:    response.data.invoiceId,
+    paymentUrl:   response.data.paymentUrl,
+    address:      response.data.address,
+    cryptoAmount: response.data.cryptoAmount,
+    qrCode:       response.data.qrCode
   };
 }
 const bcrypt = require('bcrypt');
@@ -166,12 +165,13 @@ app.post('/login', (req, res) => {
   });
 });
 
-// Buy маршрут с WolvPay
-app.post('/buy/:productId', requireAuth, (req, res) => {
-  const userId = req.user.id;
+// Маршрут за стартиране на плащане чрез WolvPay
+app.post('/buy/:productId', requireAuth, async (req, res) => {
+  const userId    = req.user.id;
   const productId = parseInt(req.params.productId);
-  const quantity = parseInt(req.body.quantity) || 1;
+  const quantity  = parseInt(req.body.quantity) || 1;
 
+  // 1. Провери наличността
   db.get(
     `SELECT * FROM products WHERE id = ? AND stock >= ?`,
     [productId, quantity],
@@ -180,33 +180,35 @@ app.post('/buy/:productId', requireAuth, (req, res) => {
         return res.status(400).json({ error: 'Продуктът не е наличен' });
       }
 
-      const total = product.price * quantity;
+      const total     = product.price * quantity;
       const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
-      // Създаване на поръчка
+      // 2. Създай запис в orders
       db.run(
         `INSERT INTO orders
-         (user_id, product_id, quantity, total_amount, expires_at)
+           (user_id, product_id, quantity, total_amount, expires_at)
          VALUES (?, ?, ?, ?, ?)`,
         [userId, productId, quantity, total, expiresAt.toISOString()],
         async function (err) {
-          if (err) return res.status(500).json({ error: 'Неуспешна поръчка' });
+          if (err) {
+            return res.status(500).json({ error: 'Неуспешна поръчка' });
+          }
 
           const orderId = this.lastID;
           try {
-            // Създай фактура в WolvPay
-            const invoice = await createWolvPayPayment(
+            // 3. Създай фактура в WolvPay
+            const invoice = await createWolvPayInvoice(
               orderId,
               total,
               'USD',
-              product.name,
+              `Order #${orderId} – ${product.name}`,
               req
             );
 
-            // Обнови поръчката и наличности
+            // 4. Обнови поръчката и намали наличността
             db.run(
               `UPDATE orders
-               SET payment_id = ?, crypto_address = ?, crypto_amount = ?
+                 SET payment_id = ?, crypto_address = ?, crypto_amount = ?
                WHERE id = ?`,
               [invoice.paymentId, invoice.address, invoice.cryptoAmount, orderId]
             );
@@ -215,20 +217,19 @@ app.post('/buy/:productId', requireAuth, (req, res) => {
               [quantity, productId]
             );
 
-            paymentSessions.set(invoice.paymentId, { orderId, expiresAt });
-            logPaymentEvent(orderId, 'created', invoice);
-
+            // 5. Върни данните към клиента
             res.json({
-              success: true,
-              paymentId: invoice.paymentId,
-              paymentUrl: invoice.paymentUrl,
-              address: invoice.address,
-              cryptoAmount: invoice.cryptoAmount,
-              qrCode: invoice.qrCode,
-              expiresAt: expiresAt.toISOString()
+              success:     true,
+              paymentId:   invoice.paymentId,
+              paymentUrl:  invoice.paymentUrl,
+              address:     invoice.address,
+              cryptoAmount:invoice.cryptoAmount,
+              qrCode:      invoice.qrCode,
+              expiresAt:   expiresAt.toISOString()
             });
           } catch (e) {
-            return res.status(500).json({ error: e.message });
+            console.error('WolvPay error:', e);
+            res.status(500).json({ error: 'Грешка при създаване на фактура' });
           }
         }
       );
