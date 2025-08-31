@@ -316,7 +316,7 @@
         }
 
         .product-image {
-            width: 100%;
+            width: 200px;
             height: 200px;
             background: linear-gradient(135deg, #001100, #003300);
             border: 1px solid #00ff00;
@@ -661,7 +661,7 @@
 
     <header>
         <nav class="container">
-            <div class="logo glitch" data-text="💀 DARK STORE">💀 TumnataMreja # Market</div>
+            <div class="logo glitch" data-text="">💀 TumnataMreja # Market</div>
             <div class="nav-links">
                 <a href="/">НАЧАЛО</a>
                 <% if (user) { %>
@@ -671,7 +671,7 @@
                         USER: <%= user.username.toUpperCase() %>
                     </span>
                 <% } else { %>
-                    <a href="/login">ДОСТЪП</a>
+                    <a href="/login">ВХОД</a>
                     <a href="/register" class="btn">РЕГИСТРАЦИЯ</a>
                 <% } %>
             </div>
@@ -681,9 +681,7 @@
     <main>
         <section class="hero">
             <div class="container">
-                <h1 class="glitch cursor" data-text="UNDERGROUND MARKET">UNDERGROUND MARKET</h1>
-                <p>АНОНИМНИ КРИПТОВАЛУТНИ ПЛАЩАНИЯ // СИГУРНА ДОСТАВКА // БЕЗ СЛЕДИ</p>
-                
+                <h1 class="glitch cursor" data-text="">TUMNATAMREJA MARKET</h1>
                 <div class="hero-features">
                     <div class="feature-badge">🔒 АНОНИМНОСТ</div>
                     <div class="feature-badge">⚡ НЕЗАБАВНО</div>
@@ -699,7 +697,7 @@
                 
                 <% if (!user) { %>
                     <div class="auth-prompt">
-                        <h3>⚠️ ACCESS DENIED</h3>
+                        <h2>⚠️ РЕГИСТРИРАЙ СЕ (NO KYC)</h2>
                         <p>НЕОБХОДИМА Е РЕГИСТРАЦИЯ ЗА ДОСТЪП ДО UNDERGROUND MARKET</p>
                         <div class="auth-buttons">
                             <a href="/login" class="btn-auth">LOGIN</a>
@@ -796,7 +794,7 @@
 
     <footer>
         <div class="container">
-            <p>&copy; 2025 TUMNATAMREJA | SECURE PAYMENTS via OXAPAY & WOLVPAY | ANONYMOUS • SECURE • UNTRACEABLE</p>
+            <p>&copy; 2025 TUMNATAMREJA | ANONYMOUS • SECURE • UNTRACEABLE</p>
         </div>
     </footer>
 
