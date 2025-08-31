@@ -1,0 +1,10 @@
+<form method="POST" action="/admin/product/edit/<%= product.id %>">
+  <input name="name" value="<%= product.name %>">
+  <textarea name="description"><%= product.description %></textarea>
+  <input name="price" type="number" value="<%= product.price %>">
+  <input name="stock" type="number" value="<%= product.stock %>">
+  <input name="category" value="<%= product.category %>">
+  <input name="image" value="<%= product.image %>">
+  <label><input type="checkbox" name="featured" <%= product.featured ? 'checked' : '' %>> Featured</label>
+  <button type="submit">💾 Запази</button>
+</form>
