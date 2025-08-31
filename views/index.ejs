@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="/css/style.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TumnataMreja - Underground Market</title>
+    <title>TumnataMreja - Market</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'></text></svg>">
 </head>
 <body>
@@ -25,8 +25,8 @@
                         USER: <%= user.username.toUpperCase() %>
                     </span>
                 <% } else { %>
-                    <a href="/login">ВХОД</a>
-                    <a href="/register" class="btn">РЕГИСТРАЦИЯ</a>
+                    <a href="/login">🔓 LOGIN</a>
+                    <a href="/register" class="btn">➕ REGISTER</a>
                 <% } %>
             </div>
         </nav>
@@ -38,51 +38,41 @@
             <div class="container">                
                 <% if (!user) { %>
                     <div class="auth-prompt">
-                        <h1>⚠️ РЕГИСТРИРАЙ СЕ (NO KYC)</h1>
-                        <p>НЕОБХОДИМА Е РЕГИСТРАЦИЯ ЗА ДОСТЪП ДО TUMNATAMREJA MARKET</p>
+                        <h1>⚠️ РЕГИСТРИРАЙ СЕ (NO KYC) ⚠️</h1>
+                        <p>НЕОБХОДИМА Е РЕГИСТРАЦИЯ ЗА ДОСТЪП ДО TUMNATAMREJA</p>
                         <div class="auth-buttons">
-                            <a href="/login" class="btn-auth">LOGIN</a>
-                            <a href="/register" class="btn-auth">REGISTER</a>
+                            <a href="/login" class="btn-auth">🔓 LOGIN</a>
+                            <a href="/register" class="btn-auth">➕ REGISTER</a>
                         </div>
                     </div>
                 <% } %>
 
 
-                <h2 class="section-title glitch" data-text="AVAILABLE PRODUCTS">AVAILABLE PRODUCTS</h2>
+                <h2 class="section-title glitch" data-text="ПРОДУКТИ / PRODUCTS">📖 ПРОДУКТИ / PRODUCTS</h2>
 
-                <div class="products-grid">
-                    <% products.forEach(product => { %>
-                        <div class="product-card">
-                            <center><div class="product-image">
-                            </div></center>
-                            
-                            <h3 class="product-name"><%= product.name %></h3>
-                            <p class="product-description"><%= product.description %></p>
-                            
-                            <div class="product-price">лв.<%= product.price.toFixed(2) %></div>
-                            
-                            <div class="product-actions">
-                                <% if (user) { %>
-                                    <button class="btn-buy" onclick="openPurchaseModal(<%= product.id %>, '<%= product.name.replace(/'/g, "\\'").replace(/"/g, '&quot;') %>'
-, <%= product.price %>)">
-                                        🛒 BUY NOW
-                                    </button>
+<div class="products-grid">
+    <% products.forEach(product => { %>
+      <div class="product-card">
+        <img src="<%= product.image %>" alt="<%= product.name %>" width="150">
+        <h2><%= product.name %></h2>
+        <p><%= product.description %></p>
+        <p><%= product.price.toFixed(2) %> лв.</p>
+      </div>
+    <% }) %>
+  </div>
                                 <% } else { %>
                                     <button class="btn-buy" onclick="alert('ACCESS DENIED - LOGIN REQUIRED!')">
                                         🔒 ACCESS DENIED
                                     </button>
-                                <% } %>
-                            </div>
-                        </div>
-                    <% }) %>
-                </div>
-            </div>
+      </div>
+    <% }) %>
+  </div>
         </section>
     </main>
  <section class="hero">
             <div class="container">
 <center><img src='https://i.postimg.cc/zX8YT9sL/banner.png' border='0' alt='banner'/></a><br /></center>
-                <h1 class="glitch cursor" data-text="">TUMNATAMREJA MARKET</h1>
+                <h1 class="glitch cursor" data-text=""></h1>
                 <div class="hero-features">
                     <div class="feature-badge">🔒 АНОНИМНОСТ</div>
                     <div class="feature-badge">⚡ НЕЗАБАВНО</div>
