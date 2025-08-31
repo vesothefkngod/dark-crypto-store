@@ -304,3 +304,4 @@ app.get('/payment-success', (req, res) => {
 // Стартиране на сървъра
 app.listen(port, () => {
   console.log(`🚀 Server listening on http://localhost:${port}`);
+});
