@@ -1,25 +1,64 @@
-<form action="/register" method="POST">
-  <label>Потребителско име</label>
-  <input type="text" name="username" value="<%= values.username||'' %>" required />
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Регистрация | Dark Crypto Store</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="container auth-page">
 
-  <label>Telegram username (по избор)</label>
-  <input type="text" name="telegram" value="<%= values.telegram||'' %>" />
+    <% if (error) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
 
-  <label>Парола</label>
-  <input type="password" name="password" required />
+    <% if (success) { %>
+      <div class="alert alert-success">
+        Успешна регистрация! Влезте, за да продължите.
+      </div>
+    <% } %>
 
-  <label>Повтори паролата</label>
-  <input type="password" name="repeatPassword" required />
+    <form action="/register" method="POST" class="auth-form">
+      <h2>Регистрация</h2>
 
-  <!-- Honeypot поле (скрито за потребителя) -->
-  <div style="display:none">
-    <label>Website</label>
-    <input type="text" name="website" value="" />
+      <label>Потребителско име</label>
+      <input
+        type="text"
+        name="username"
+        value="<%= (values && values.username) || '' %>"
+        required
+      />
+
+      <label>Telegram (по избор)</label>
+      <input
+        type="text"
+        name="telegram"
+        value="<%= (values && values.telegram) || '' %>"
+      />
+
+      <label>Парола</label>
+      <input type="password" name="password" required />
+
+      <label>Повтори паролата</label>
+      <input type="password" name="repeatPassword" required />
+
+      <!-- Honeypot поле (скрито) -->
+      <div style="display:none">
+        <label>Website</label>
+        <input type="text" name="website" value="" />
+      </div>
+
+      <!-- Анти-бот параметри -->
+      <input type="hidden" name="startTime" value="<%= bot.startTime %>" />
+      <input type="hidden" name="formSig"   value="<%= bot.formSig   %>" />
+
+      <button type="submit">Регистрация</button>
+    </form>
+
+    <p class="switch-link">
+      Вече имате акаунт? <a href="/login">Вход</a>
+    </p>
   </div>
-
-  <!-- Анти-бот параметри -->
-  <input type="hidden" name="startTime" value="<%= bot.startTime %>" />
-  <input type="hidden" name="formSig"   value="<%= bot.formSig %>" />
-
-  <button type="submit" class="btn">Регистрирай се</button>
-</form>
+</body>
+</html>
