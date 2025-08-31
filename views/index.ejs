@@ -33,23 +33,9 @@
     </header>
 
     <main>
-        <section class="hero">
-            <div class="container">
-<center><img src='https://i.postimg.cc/zX8YT9sL/banner.png' border='0' alt='banner'/></a><br /></center>
-                <h1 class="glitch cursor" data-text="">TUMNATAMREJA MARKET</h1>
-                <div class="hero-features">
-                    <div class="feature-badge">🔒 АНОНИМНОСТ</div>
-                    <div class="feature-badge">⚡ НЕЗАБАВНО</div>
-                    <div class="feature-badge">💀 UNTRACEABLE</div>
-                    <div class="feature-badge">🌐 24/7 ONLINE</div>
-                </div>
-            </div>
-        </section>
 
         <section class="products-section">
-            <div class="container">
-                <h2 class="section-title glitch" data-text="AVAILABLE PRODUCTS">AVAILABLE PRODUCTS</h2>
-                
+            <div class="container">                
                 <% if (!user) { %>
                     <div class="auth-prompt">
                         <h2>⚠️ РЕГИСТРИРАЙ СЕ (NO KYC)</h2>
@@ -60,6 +46,9 @@
                         </div>
                     </div>
                 <% } %>
+
+
+                <h2 class="section-title glitch" data-text="AVAILABLE PRODUCTS">AVAILABLE PRODUCTS</h2>
 
                 <div class="products-grid">
                     <% products.forEach(product => { %>
@@ -90,8 +79,18 @@
             </div>
         </section>
     </main>
-
-<button class="btn-buy" onclick="openPurchaseModal(...)"> 🛒 BUY NOW </button>
+ <section class="hero">
+            <div class="container">
+<center><img src='https://i.postimg.cc/zX8YT9sL/banner.png' border='0' alt='banner'/></a><br /></center>
+                <h1 class="glitch cursor" data-text="">TUMNATAMREJA MARKET</h1>
+                <div class="hero-features">
+                    <div class="feature-badge">🔒 АНОНИМНОСТ</div>
+                    <div class="feature-badge">⚡ НЕЗАБАВНО</div>
+                    <div class="feature-badge">💀 UNTRACEABLE</div>
+                    <div class="feature-badge">🌐 24/7 ONLINE</div>
+                </div>
+            </div>
+        </section>
 
 
     <footer>
