@@ -634,7 +634,49 @@ app.get('/admin/dashboard', requireAdmin, (req, res) => {
   });
 });
 
+//ОРДЪР КРИЕЙТ 
+app.post('/order/create', (req, res) => {
+  const { productId, quantity } = req.body;
+
+  db.get(`SELECT * FROM products WHERE id = ?`, [productId], (err, product) => {
+    if (err || !product) {
+      return res.status(404).send('Продуктът не е намерен');
+    }
+
+    const totalAmount = product.price * quantity;
+    const paymentId = Date.now().toString(); // или UUID
+
+    paymentSessions.set(paymentId, {
+      productId,
+      quantity,
+      totalAmount,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000)
+    });
+
+    const invoiceUrl = `https://oxapay.com/invoice?amount=${totalAmount}&merchant=${CRYPTO_CONFIG.oxapay.merchantKey}&paymentId=${paymentId}`;
+
+    res.redirect(invoiceUrl);
+  });
+});
+
 // Health check
+app.post('/admin/product/create', requireAdmin, (req, res) => {
+  const { name, description, price, stock, category, image, featured } = req.body;
+
+  db.run(
+    `INSERT INTO products (name, description, price, stock, category, image, featured) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [name, description, price, stock, category, image, featured ? 1 : 0],
+    (err) => {
+      if (err) {
+        console.error('❌ Грешка при създаване на продукт:', err.message);
+        return res.status(500).send('Грешка при създаване на продукт');
+      }
+      console.log('✅ Продукт създаден успешно');
+      res.redirect('/admin/dashboard');
+    }
+  );
+});
+
 app.get('/health', (req, res) => {
     res.json({
         status: 'healthy',
