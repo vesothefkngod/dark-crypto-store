@@ -1,19 +1,49 @@
-<form action="/login" method="POST">
-  <label>Потребителско име</label>
-  <input type="text" name="username" required />
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Вход | Dark Crypto Store</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="container auth-page">
 
-  <label>Парола</label>
-  <input type="password" name="password" required />
+    <% if (error) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
 
-  <!-- Honeypot поле -->
-  <div style="display:none">
-    <label>Website</label>
-    <input type="text" name="website" value="" />
+    <% if (success) { %>
+      <div class="alert alert-success">
+        Регистрацията бе успешна! Моля влезте.
+      </div>
+    <% } %>
+
+    <form action="/login" method="POST" class="auth-form">
+      <h2>Вход</h2>
+
+      <label>Потребителско име</label>
+      <input type="text" name="username" required />
+
+      <label>Парола</label>
+      <input type="password" name="password" required />
+
+      <!-- Honeypot поле (скрито) -->
+      <div style="display:none">
+        <label>Website</label>
+        <input type="text" name="website" value="" />
+      </div>
+
+      <!-- Анти-бот параметри -->
+      <input type="hidden" name="startTime" value="<%= bot.startTime %>" />
+      <input type="hidden" name="formSig"   value="<%= bot.formSig   %>" />
+
+      <button type="submit">Вход</button>
+    </form>
+
+    <p class="switch-link">
+      Нямате акаунт? <a href="/register">Регистрация</a>
+    </p>
   </div>
-
-  <!-- Анти-бот параметри -->
-  <input type="hidden" name="startTime" value="<%= bot.startTime %>" />
-  <input type="hidden" name="formSig"   value="<%= bot.formSig %>" />
-
-  <button type="submit" class="btn">Вход</button>
-</form>
+</body>
+</html>
