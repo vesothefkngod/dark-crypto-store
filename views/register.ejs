@@ -1,49 +1,25 @@
-<!DOCTYPE html>
-<html lang="bg">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Register | TumnataMreja</title>
-  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-  <link rel="stylesheet" href="/css/style.css" />
-</head>
-<body>
-  <div class="container auth-page">
-    <h1>➕ РЕГИСТРАЦИЯ</h1>
+<form action="/register" method="POST">
+  <label>Потребителско име</label>
+  <input type="text" name="username" value="<%= values.username||'' %>" required />
 
-    <% if (error) { %>
-      <div class="alert alert-error"><%= error %></div>
-    <% } %>
+  <label>Telegram username (по избор)</label>
+  <input type="text" name="telegram" value="<%= values.telegram||'' %>" />
 
-    <form action="/register" method="POST">
-      <label>Потребителско име</label>
-      <input
-        type="text"
-        name="username"
-        value="<%= values.username || '' %>"
-        required
-      />
+  <label>Парола</label>
+  <input type="password" name="password" required />
 
-      <label>Telegram username (по избор)</label>
-      <input
-        type="text"
-        name="telegram"
-        value="<%= values.telegram || '' %>"
-        placeholder="@yourhandle"
-      />
+  <label>Повтори паролата</label>
+  <input type="password" name="repeatPassword" required />
 
-      <label>Парола</label>
-      <input type="password" name="password" required />
-
-      <label>Повтори паролата</label>
-      <input type="password" name="repeatPassword" required />
-
-      <div class="g-recaptcha" data-sitekey="<%= recaptchaSiteKey %>"></div>
-
-      <button type="submit" class="btn">Регистрирай се</button>
-    </form>
-
-    <p>Вече имаш акаунт? <a href="/login">🔒 Влез</a></p>
+  <!-- Honeypot поле (скрито за потребителя) -->
+  <div style="display:none">
+    <label>Website</label>
+    <input type="text" name="website" value="" />
   </div>
-</body>
-</html>
+
+  <!-- Анти-бот параметри -->
+  <input type="hidden" name="startTime" value="<%= bot.startTime %>" />
+  <input type="hidden" name="formSig"   value="<%= bot.formSig %>" />
+
+  <button type="submit" class="btn">Регистрирай се</button>
+</form>
