@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <title>👤 Профил на <%= user.username %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <h1>👤 <%= user.username %></h1>
+    <p>📧 <%= user.email %> | 🕒 Регистриран: <%= user.created_at %></p>
+    <p>📦 Поръчки: <%= stats.total_orders %> | 💰 Общо похарчено: $<%= stats.total_spent.toFixed(2) %></p>
+  </header>
+
+  <section>
+    <h2>📜 История на поръчки</h2>
+    <table>
+      <tr><th>ID</th><th>Продукт</th><th>Сума</th><th>Статус</th><th>Дата</th></tr>
+      <% orders.forEach(o => { %>
+        <tr>
+          <td><%= o.id %></td>
+          <td><%= o.product_id %></td>
+          <td>$<%= o.total_amount.toFixed(2) %></td>
+          <td><%= o.payment_status %></td>
+          <td><%= o.created_at %></td>
+        </tr>
+      <% }) %>
+    </table>
+  </section>
+</body>
+</html>
