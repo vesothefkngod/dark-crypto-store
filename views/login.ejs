@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 ACCESS TERMINAL - Dark Store</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Code Pro', 'Courier New', monospace;
+            background: #000000;
+            color: #00ff00;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Matrix background */
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.1;
+        }
+
+        /* Scanlines */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 0, 0.05),
+                rgba(0, 255, 0, 0.05) 2px,
+                transparent 2px,
+                transparent 4px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .login-container {
+            background: #000;
+            border: 2px solid #00ff00;
+            padding: 3rem;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 0 50px rgba(0, 255, 0, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #00ff00, #000, #00ff00, #000);
+            z-index: -1;
+            animation: border-spin 3s linear infinite;
+        }
+
+        @keyframes border-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .terminal-header {
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+            font-size: 0.8rem;
+            color: #00cc00;
+        }
+
+        .logo {
+            text-align: center;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #00ff00;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 20px #00ff00;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .login-title {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #00ff00;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .login-subtitle {
+            text-align: center;
+            color: #00cc00;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+            text-transform: uppercase;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #00ff00;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #00ff00;
+            background: #000;
+            color: #00ff00;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            background: rgba(0, 255, 0, 0.05);
+        }
+
+        .form-group input::placeholder {
+            color: #006600;
+            text-transform: uppercase;
+        }
+
+        .login-btn {
+            width: 100%;
+            background: #000;
+            color: #00ff00;
+            padding: 1.2rem;
+            border: 2px solid #00ff00;
+            font-family: inherit;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .login-btn:hover:not(:disabled) {
+            background: #00ff00;
+            color: #000;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.8);
+        }
+
+        .login-btn:disabled {
+            background: #333;
+            color: #666;
+            border-color: #333;
+            cursor: not-allowed;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 2rem 0;
+            position: relative;
+            color: #006600;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #006600;
+        }
+
+        .divider span {
+            background: #000;
+            padding: 0 1rem;
+        }
+
+        .register-link {
+            text-align: center;
+        }
+
+        .register-link a {
+            color: #00ff00;
+            text-decoration: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .register-link a:hover {
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        .back-home {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            color: #00cc00;
+            text-decoration: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+
+        .back-home:hover {
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        .alert {
+            padding: 1rem;
+            border: 2px solid;
+            margin-bottom: 2rem;
+            text-align: center;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .alert-error {
+            color: #ff0000;
+            border-color: #ff0000;
+            background: rgba(255, 0, 0, 0.1);
+            animation: shake 0.5s ease;
+        }
+
+        .alert-success {
+            color: #00ff00;
+            border-color: #00ff00;
+            background: rgba(0, 255, 0, 0.1);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .features {
+            margin-top: 2rem;
+            border-top: 1px solid #00ff00;
+            padding-top: 2rem;
+        }
+
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #00cc00;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #333;
+            border-radius: 50%;
+            border-top-color: #00ff00;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Terminal cursor */
+        .cursor::after {
+            content: '_';
+            animation: blink 1s infinite;
+            color: #00ff00;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        /* Glitch effect */
+        .glitch {
+            position: relative;
+            animation: glitch 2s linear infinite;
+        }
+
+        @keyframes glitch {
+            2%, 64% { transform: translate(1px, 0) skew(0deg); }
+            4%, 60% { transform: translate(-1px, 0) skew(0deg); }
+            62% { transform: translate(0, 0) skew(2deg); }
+        }
+
+        @media (max-width: 768px) {
+            .login-container {
+                margin: 1rem;
+                padding: 2rem;
+            }
+            
+            .back-home {
+                position: relative;
+                top: auto;
+                left: auto;
+                margin-bottom: 2rem;
+                justify-content: center;
+            }
+            
+            body {
+                align-items: flex-start;
+                padding-top: 2rem;
+            }
+            
+            .feature-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="matrix-bg" id="matrixBg"></div>
+    
+    <a href="/" class="back-home">
+        ← BACK TO MARKET
+    </a>
+
+    <div class="login-container">
+        <div class="terminal-header">
+            SYSTEM: DARK-STORE-v2.0 | STATUS: ONLINE | SECURITY: MAXIMUM
+        </div>
+        
+        <div class="logo glitch">🔐 ACCESS</div>
+        
+        <h1 class="login-title cursor">TERMINAL LOGIN</h1>
+        <p class="login-subtitle">ENTER CREDENTIALS TO PROCEED</p>
+
+        <% if (error) { %>
+            <div class="alert alert-error">
+                ❌ <%= error.toUpperCase() %>
+            </div>
+        <% } %>
+
+        <% if (success) { %>
+            <div class="alert alert-success">
+                ✅ REGISTRATION SUCCESSFUL - LOGIN TO PROCEED
+            </div>
+        <% } %>
+
+        <form action="/login" method="POST" id="loginForm">
+            <div class="form-group">
+                <label for="username">👤 USERNAME</label>
+                <input type="text" id="username" name="username" placeholder="ENTER USERNAME" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">🔒 PASSWORD</label>
+                <input type="password" id="password" name="password" placeholder="ENTER PASSWORD" required>
+            </div>
+
+            <button type="submit" class="login-btn" id="loginBtn">
+                🚀 INITIALIZE ACCESS
+            </button>
+        </form>
+
+        <div class="divider">
+            <span>OR</span>
+        </div>
+
+        <div class="register-link">
+            NO ACCOUNT? <a href="/register">CREATE NEW IDENTITY</a>
+        </div>
+
+        <div class="features">
+            <h3 style="text-align: center; color: #00ff00; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 2px;">
+                🎯 SYSTEM FEATURES
+            </h3>
+            <div class="feature-list">
+                <div class="feature-item">
+                    <span>🔒</span> ENCRYPTED PAYMENTS
+                </div>
+                <div class="feature-item">
+                    <span>📦</span> ORDER TRACKING
+                </div>
+                <div class="feature-item">
+                    <span>⚡</span> INSTANT PROCESSING
+                </div>
+                <div class="feature-item">
+                    <span>💀</span> ANONYMOUS DELIVERY
+                </div>
+                <div class="feature-item">
+                    <span>🌐</span> 24/7 SUPPORT
+                </div>
+                <div class="feature-item">
+                    <span>🎁</span> EXCLUSIVE ACCESS
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Matrix rain effect
+        function createMatrix() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const matrixBg = document.getElementById('matrixBg');
+            
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            matrixBg.appendChild(canvas);
+            
+            const chars = '01';
+            const charArray = chars.split('');
+            const fontSize = 10;
+            const columns = canvas.width / fontSize;
+            const drops = [];
+            
+            for (let x = 0; x < columns; x++) {
+                drops[x] = 1;
+            }
+            
+            function draw() {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#00ff00';
+                ctx.font = fontSize + 'px monospace';
+                
+                for (let i = 0; i < drops.length; i++) {
+                    const text = charArray[Math.floor(Math.random() * charArray.length)];
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+            }
+            
+            setInterval(draw, 50);
+        }
+        
+        window.addEventListener('load', createMatrix);
+
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const loginBtn = document.getElementById('loginBtn');
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                e.preventDefault();
+                alert('ERROR: ALL FIELDS REQUIRED!');
+                return;
+            }
+
+            if (password.length < 6) {
+                e.preventDefault();
+                alert('ERROR: PASSWORD TOO SHORT!');
+                return;
+            }
+
+            // Show loading state
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span class="loading"></span> ACCESSING...';
+        });
+
+        // Auto-focus on username field
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('username').focus();
+            
+            // Terminal typing sound effect (optional)
+            const inputs = document.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.addEventListener('keypress', function(e) {
+                    // Optional: add typing sound effect here
+                });
+            });
+        });
+
+        // Enter key navigation
+        document.getElementById('username').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('password').focus();
+            }
+        });
+
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('loginForm').submit();
+            }
+        });
+
+        // Random glitch effect
+        setInterval(() => {
+            const glitchElements = document.querySelectorAll('.glitch');
+            glitchElements.forEach(el => {
+                if (Math.random() > 0.95) {
+                    el.style.animation = 'none';
+                    setTimeout(() => {
+                        el.style.animation = 'glitch 0.3s linear';
+                    }, 10);
+                }
+            });
+        }, 2000);
+
+        // Terminal boot sequence
+        window.addEventListener('load', function() {
+            const messages = [
+                'INITIALIZING DARK STORE TERMINAL...',
+                'LOADING SECURITY PROTOCOLS...',
+                'ESTABLISHING SECURE CONNECTION...',
+                'SYSTEM READY - ENTER CREDENTIALS'
+            ];
+            
+            let messageIndex = 0;
+            const terminal = document.querySelector('.terminal-header');
+            
+            function showBootMessage() {
+                if (messageIndex < messages.length) {
+                    terminal.textContent = messages[messageIndex];
+                    messageIndex++;
+                    setTimeout(showBootMessage, 800);
+                } else {
+                    terminal.textContent = 'SYSTEM: DARK-STORE-v2.0 | STATUS: ONLINE | SECURITY: MAXIMUM';
+                }
+            }
+            
+            setTimeout(showBootMessage, 1000);
+        });
+    </script>
+</body>
+</html>
