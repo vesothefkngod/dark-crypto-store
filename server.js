@@ -598,49 +598,40 @@ app.post('/admin/login', (req, res) => {
 });
 
 app.get('/admin/dashboard', requireAdmin, (req, res) => {
-    db.all(`
-        SELECT 
-            o.*, 
-            u.username, 
-            p.name as product_name,
-            p.price as product_price
-        FROM orders o 
-        LEFT JOIN users u ON o.user_id = u.id 
-        LEFT JOIN products p ON o.product_id = p.id 
-        ORDER BY o.created_at DESC 
-        LIMIT 50
-    `, [], (err, orders) => {
-        if (err) {
-            console.error(err);
-            orders = [];
-        }
+  db.all(`SELECT * FROM products ORDER BY id DESC`, [], (err, products) => {
+    db.all(`SELECT * FROM users ORDER BY created_at DESC`, [], (err, users) => {
+      db.all(`SELECT * FROM orders ORDER BY created_at DESC LIMIT 50`, [], (err, orders) => {
 
-        db.all("SELECT * FROM products ORDER BY featured DESC, id DESC", [], (err, products) => {
-            if (err) {
-                console.error(err);
-                products = [];
-            }
+        // 📊 Поръчки по дни
+        db.all(`SELECT DATE(created_at) as date, COUNT(*) as count FROM orders GROUP BY date ORDER BY date DESC LIMIT 7`, [], (err, ordersByDay) => {
 
-            db.get(`
-                SELECT 
-                    COUNT(*) as total_orders,
-                    SUM(total_amount) as total_revenue,
-                    COUNT(CASE WHEN payment_status = 'completed' THEN 1 END) as completed_orders,
-                    COUNT(CASE WHEN payment_status = 'pending' THEN 1 END) as pending_orders
-                FROM orders
-            `, [], (err, stats) => {
-                
-                db.get("SELECT COUNT(*) as total_users FROM users", [], (err, userStats) => {
-                    res.render('admin_dashboard', { 
-                        orders, 
-                        products,
-                        stats: stats || { total_orders: 0, total_revenue: 0, completed_orders: 0, pending_orders: 0 },
-                        userStats: userStats || { total_users: 0 }
-                    });
-                });
+          // 💰 Приходи по дни
+          db.all(`SELECT DATE(created_at) as date, SUM(total_amount) as total FROM orders GROUP BY date ORDER BY date DESC LIMIT 7`, [], (err, revenueByDay) => {
+
+            // 🧮 Общи статистики
+            const totalRevenue = orders.reduce((sum, o) => sum + o.total_amount, 0);
+            const totalOrders = orders.length;
+            const totalUsers = users.length;
+
+            res.render('admin_dashboard', {
+              products,
+              users,
+              orders,
+              userStats: { total_users: totalUsers },
+              stats: {
+                total_orders: totalOrders,
+                total_revenue: totalRevenue
+              },
+              chartData: {
+                ordersByDay,
+                revenueByDay
+              }
             });
+          });
         });
+      });
     });
+  });
 });
 
 // Health check
