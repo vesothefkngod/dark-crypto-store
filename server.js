@@ -1,28 +1,25 @@
 // server.js
 
-// 0. Зареждаме .env променливите
-require('dotenv').config()
-
 // 1. Импорти
-const express       = require('express')
-const sqlite3       = require('sqlite3').verbose()
-const path          = require('path')
-const crypto        = require('crypto')
-const axios         = require('axios')
-const bcrypt        = require('bcrypt')
-const cookieParser  = require('cookie-parser')
-const cors          = require('cors')
+const express      = require('express')
+const sqlite3      = require('sqlite3').verbose()
+const path         = require('path')
+const crypto       = require('crypto')
+const axios        = require('axios')
+const bcrypt       = require('bcrypt')
+const cookieParser = require('cookie-parser')
+const cors         = require('cors')
 
 const app  = express()
 const port = process.env.PORT || 3000
 
-// 2. Конфигурация на крипто плащания (WolvPay)
+// 2. Конфигурация за крипто плащания (WolvPay)
 const CRYPTO_CONFIG = {
   wolvpay: {
     apiUrl        : process.env.WOLVPAY_API_URL,
     merchantKey   : process.env.WOLVPAY_MERCHANT_KEY,
-    webhookSecret : process.env.WOLVPAY_WEBHOOK_SECRET,
-  },
+    webhookSecret : process.env.WOLVPAY_WEBHOOK_SECRET
+  }
 }
 
 // 3. Middleware
@@ -36,7 +33,6 @@ app.set('view engine', 'ejs')
 // 4. SQLite & схеми
 const db = new sqlite3.Database(path.join(__dirname, 'store.sqlite'))
 db.serialize(() => {
-  // users: махаме email, добавяме telegram_username
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,13 +55,13 @@ db.serialize(() => {
 
   db.run(`
     CREATE TABLE IF NOT EXISTS orders (
-      id             INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id        INTEGER,
-      product_id     INTEGER,
-      quantity       INTEGER DEFAULT 1,
-      total_amount   REAL    NOT NULL,
-      payment_provider TEXT  DEFAULT 'wolvpay',
-      payment_status   TEXT  DEFAULT 'pending',
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id         INTEGER,
+      product_id      INTEGER,
+      quantity        INTEGER DEFAULT 1,
+      total_amount    REAL    NOT NULL,
+      payment_provider TEXT   DEFAULT 'wolvpay',
+      payment_status   TEXT   DEFAULT 'pending',
       payment_id       TEXT,
       crypto_address   TEXT,
       crypto_amount    TEXT,
@@ -90,8 +86,9 @@ db.serialize(() => {
   `)
 })
 
-// 5. Всяка сесия идва от тук
+// 5. Сесии и автентикация
 const sessions = {}
+
 function requireAuth(req, res, next) {
   const sid = req.cookies.sessionId
   if (sid && sessions[sid]) {
@@ -113,15 +110,14 @@ function logPaymentEvent(orderId, eventType, data) {
 
 async function createWolvPayInvoice(orderId, amount, currency, description, req) {
   const payload = {
-    merchant    : CRYPTO_CONFIG.wolvpay.merchantKey,
-    invoiceValue: amount,
+    merchant     : CRYPTO_CONFIG.wolvpay.merchantKey,
+    invoiceValue : amount,
     currency,
     description,
-    callbackUrl : `${req.protocol}://${req.get('host')}/webhook/wolvpay`,
-    returnUrl   : `${req.protocol}://${req.get('host')}/payment-success?order=${orderId}`,
-    lifetime    : 30
+    callbackUrl  : `${req.protocol}://${req.get('host')}/webhook/wolvpay`,
+    returnUrl    : `${req.protocol}://${req.get('host')}/payment-success?order=${orderId}`,
+    lifetime     : 30
   }
-
   const resp = await axios.post(
     `${CRYPTO_CONFIG.wolvpay.apiUrl}/invoice`,
     payload
@@ -138,18 +134,22 @@ async function createWolvPayInvoice(orderId, amount, currency, description, req)
 
 // 7. Рути
 
-// 7.1. Списък продукти
+// 7.1. Начална страница (списък продукти)
 app.get('/', (req, res) => {
-  db.all(`SELECT * FROM products WHERE stock > 0`, [], (err, products) => {
-    if (err) {
-      console.error('DB Error:', err)
-      return res.status(500).send('Database error')
+  db.all(
+    `SELECT * FROM products WHERE stock > 0`,
+    [],
+    (err, products) => {
+      if (err) {
+        console.error('DB Error:', err)
+        return res.status(500).send('Database error')
+      }
+      res.render('index', {
+        products,
+        user: sessions[req.cookies.sessionId] || null
+      })
     }
-    res.render('index', {
-      products,
-      user: sessions[req.cookies.sessionId] || null
-    })
-  })
+  )
 })
 
 // 7.2. Регистрация
@@ -164,13 +164,13 @@ app.get('/register', (req, res) => {
 app.post('/register', async (req, res) => {
   const {
     username,
-    telegram,            // optional
+    telegram,
     password,
     repeatPassword,
     'g-recaptcha-response': captcha
   } = req.body
 
-  // валидация полета
+  // Валидация
   if (!username || !password || !repeatPassword) {
     return res.render('register', {
       error           : 'Всички полета (без Telegram) са задължителни',
@@ -193,16 +193,16 @@ app.post('/register', async (req, res) => {
     })
   }
 
-  // reCAPTCHA валидация
+  // Проверка на reCAPTCHA
   try {
     const resp = await axios.post(
       'https://www.google.com/recaptcha/api/siteverify',
       null,
       {
         params: {
-          secret   : process.env.RECAPTCHA_SECRET,
-          response : captcha,
-          remoteip : req.ip
+          secret  : process.env.RECAPTCHA_SECRET,
+          response: captcha,
+          remoteip: req.ip
         }
       }
     )
@@ -215,7 +215,7 @@ app.post('/register', async (req, res) => {
     })
   }
 
-  // запис в базата
+  // Запис в БД
   try {
     const hash = await bcrypt.hash(password, 10)
     db.run(
@@ -269,16 +269,16 @@ app.post('/login', async (req, res) => {
     })
   }
 
-  // reCAPTCHA валидация
+  // reCAPTCHA проверка
   try {
     const resp = await axios.post(
       'https://www.google.com/recaptcha/api/siteverify',
       null,
       {
         params: {
-          secret   : process.env.RECAPTCHA_SECRET,
-          response : captcha,
-          remoteip : req.ip
+          secret  : process.env.RECAPTCHA_SECRET,
+          response: captcha,
+          remoteip: req.ip
         }
       }
     )
@@ -291,7 +291,7 @@ app.post('/login', async (req, res) => {
     })
   }
 
-  // влизане
+  // Проверка на креденшъли
   db.get(
     `SELECT * FROM users WHERE username = ?`,
     [username],
@@ -303,15 +303,15 @@ app.post('/login', async (req, res) => {
           recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY
         })
       }
-      const sessionId = crypto.randomBytes(16).toString('hex')
-      sessions[sessionId] = user
+      const sessionId      = crypto.randomBytes(16).toString('hex')
+      sessions[sessionId]  = user
       res.cookie('sessionId', sessionId, { httpOnly: true })
       res.redirect('/')
     }
   )
 })
 
-// 7.4. Пазаруване (за completeness)
+// 7.4. Пазаруване
 app.post('/buy/:productId', requireAuth, async (req, res) => {
   const userId    = req.user.id
   const productId = parseInt(req.params.productId, 10)
@@ -324,6 +324,7 @@ app.post('/buy/:productId', requireAuth, async (req, res) => {
       if (err || !product) {
         return res.status(400).json({ error: 'Product unavailable' })
       }
+
       const total     = product.price * quantity
       const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString()
 
@@ -339,16 +340,18 @@ app.post('/buy/:productId', requireAuth, async (req, res) => {
 
           try {
             const invoice = await createWolvPayInvoice(
-              orderId, total, 'USD',
-              `Order #${orderId} - ${product.name}`,
+              orderId,
+              total,
+              'USD',
+              `Order #${orderId} – ${product.name}`,
               req
             )
 
             db.run(
               `UPDATE orders
-               SET payment_id   = ?,
-                   crypto_address = ?,
-                   crypto_amount  = ?
+                 SET payment_id    = ?,
+                     crypto_address = ?,
+                     crypto_amount  = ?
                WHERE id = ?`,
               [invoice.paymentId, invoice.address, invoice.cryptoAmount, orderId]
             )
@@ -396,13 +399,14 @@ app.post('/webhook/wolvpay', express.json(), (req, res) => {
     db.run(
       `UPDATE orders
          SET payment_status = 'completed',
-             tx_hash       = ?,
-             updated_at    = CURRENT_TIMESTAMP
+             tx_hash        = ?,
+             updated_at     = CURRENT_TIMESTAMP
        WHERE payment_id = ?`,
       [txID, invoice_id]
     )
     logPaymentEvent(invoice_id, 'completed', req.body)
   }
+
   res.json({ success: true })
 })
 
@@ -434,7 +438,7 @@ app.use((err, req, res, next) => {
   res.status(500).send('Server error')
 })
 
-// 9. Стартиране
+// 9. Стартиране на сървъра
 app.listen(port, () => {
   console.log(`🚀 Server listening on http://localhost:${port}`)
 })
