@@ -2,63 +2,73 @@
 <html lang="bg">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Регистрация | Dark Crypto Store</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TumnataMreja – Market</title>
   <link rel="stylesheet" href="/css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,...
+    <!-- (твоя data-URI за иконата) -->
+  " />
 </head>
 <body>
+  <!-- Matrix background -->
+  <div class="matrix-bg" id="matrixBg"></div>
+
+  <!-- HEADER / NAV -->
+  <header>
+    <nav class="container">
+      <div class="logo glitch" data-text="">
+        <img
+          src="https://i.postimg.cc/nL66r5Kh/logo.png"
+          alt="logo"
+          class="logo-img"
+        />
+        <div class="logo-text"></div>
+      </div>
+      <div class="nav-links">
+        <a href="/">НАЧАЛО</a>
+
+        <% if (user) { %>
+          <a href="/dashboard">СИСТЕМА</a>
+          <a href="/logout">ИЗХОД</a>
+          <span
+            class="user-badge"
+            style="color:#00ff00; border:1px solid #00ff00; padding:0.3rem 0.8rem;"
+          >
+            USER: <%= user.username.toUpperCase() %>
+          </span>
+        <% } else { %>
+          <a href="/login">🔒 LOGIN</a>
+          <a href="/register" class="btn">➕ REGISTER</a>
+        <% } %>
+      </div>
+    </nav>
+  </header>
+
+<body>
   <div class="container auth-page">
+    <h1>➕ РЕГИСТРАЦИЯ</h1>
 
     <% if (error) { %>
       <div class="alert alert-error"><%= error %></div>
     <% } %>
 
-    <% if (success) { %>
-      <div class="alert alert-success">
-        Успешна регистрация! Влезте, за да продължите.
-      </div>
-    <% } %>
-
     <form action="/register" method="POST" class="auth-form">
-      <h2>Регистрация</h2>
-
       <label>Потребителско име</label>
-      <input
-        type="text"
-        name="username"
-        value="<%= (values && values.username) || '' %>"
-        required
-      />
+      <input type="text" name="username" value="<%= values.username||'' %>" required/>
 
       <label>Telegram (по избор)</label>
-      <input
-        type="text"
-        name="telegram"
-        value="<%= (values && values.telegram) || '' %>"
-      />
+      <input type="text" name="telegram" value="<%= values.telegram||'' %>" />
 
       <label>Парола</label>
-      <input type="password" name="password" required />
+      <input type="password" name="password" required/>
 
       <label>Повтори паролата</label>
-      <input type="password" name="repeatPassword" required />
-
-      <!-- Honeypot поле (скрито) -->
-      <div style="display:none">
-        <label>Website</label>
-        <input type="text" name="website" value="" />
-      </div>
-
-      <!-- Анти-бот параметри -->
-      <input type="hidden" name="startTime" value="<%= bot.startTime %>" />
-      <input type="hidden" name="formSig"   value="<%= bot.formSig   %>" />
+      <input type="password" name="repeatPassword" required/>
 
       <button type="submit">Регистрация</button>
     </form>
 
-    <p class="switch-link">
-      Вече имате акаунт? <a href="/login">Вход</a>
-    </p>
+    <p>Вече имате акаунт? <a href="/login">Вход</a></p>
   </div>
 </body>
 </html>
