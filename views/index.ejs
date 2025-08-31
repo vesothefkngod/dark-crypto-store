@@ -710,13 +710,12 @@
                     <% products.forEach(product => { %>
                         <div class="product-card">
                             <center><div class="product-image">
-<img src='https://i.postimg.cc/kXSMBp5p/deyne03x.png' border='0' alt='deyne03x'/></a>
                             </div></center>
                             
                             <h3 class="product-name"><%= product.name %></h3>
                             <p class="product-description"><%= product.description %></p>
                             
-                            <div class="product-price">$<%= product.price.toFixed(2) %></div>
+                            <div class="product-price">лв.<%= product.price.toFixed(2) %></div>
                             
                             <div class="product-actions">
                                 <% if (user) { %>
