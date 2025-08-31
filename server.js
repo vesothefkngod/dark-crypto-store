@@ -1,3 +1,5 @@
+// server.js
+
 // 1. Импорти и конфигурации
 const express      = require('express');
 const sqlite3      = require('sqlite3').verbose();
@@ -303,3 +305,5 @@ app.get('/payment-success', requireAuth, (req, res) => {
 // 7. Стартиране на сървъра
 app.listen(port, () => {
   console.log(`🚀 Server listening on http://localhost:${port}`);
+});
+```
