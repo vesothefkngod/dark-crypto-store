@@ -38,8 +38,8 @@
             <div class="container">                
                 <% if (!user) { %>
                     <div class="auth-prompt">
-                        <h2>⚠️ РЕГИСТРИРАЙ СЕ (NO KYC)</h2>
-                        <p>НЕОБХОДИМА Е РЕГИСТРАЦИЯ ЗА ДОСТЪП ДО UNDERGROUND MARKET</p>
+                        <h1>⚠️ РЕГИСТРИРАЙ СЕ (NO KYC)</h1>
+                        <p>НЕОБХОДИМА Е РЕГИСТРАЦИЯ ЗА ДОСТЪП ДО TUMNATAMREJA MARKET</p>
                         <div class="auth-buttons">
                             <a href="/login" class="btn-auth">LOGIN</a>
                             <a href="/register" class="btn-auth">REGISTER</a>
@@ -339,20 +339,5 @@ async function processPurchase() {
     document.body.style.overflow = 'auto';
   }
 </script>
-<!-- 🛒 Purchase Modal -->
-<div id="purchaseModal" class="modal" style="display: none;">
-  <div class="modal-content">
-    <h2>🛍️ Purchase: <span id="modalProductNameDisplay"></span></h2>
-
-    <label for="modalQuantity">Quantity:</label>
-    <input type="number" id="modalQuantity" value="1" min="1" />
-
-    <label for="modalTotal">Total Price:</label>
-    <input type="text" id="modalTotal" readonly />
-
-    <button onclick="initializePayment()">🚀 INITIALIZE PAYMENT</button>
-    <button onclick="closePurchaseModal()">❌ CANCEL</button>
-  </div>
-</div>
 </body>
 </html>
