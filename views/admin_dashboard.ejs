@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="bg">
 <head>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <meta charset="UTF-8">
   <title>💀 Admin Panel</title>
   <link rel="stylesheet" href="/css/style.css">
@@ -63,5 +64,43 @@
       <% }) %>
     </table>
   </section>
+<section>
+  <h2>📊 Статистика</h2>
+  <div style="width: 100%; max-width: 800px;">
+    <canvas id="ordersChart"></canvas>
+    <canvas id="revenueChart" style="margin-top: 2rem;"></canvas>
+  </div>
+</section>
+<script>
+  const ordersData = <%- JSON.stringify(chartData.ordersByDay) %>;
+  const revenueData = <%- JSON.stringify(chartData.revenueByDay) %>;
+
+  const ordersCtx = document.getElementById('ordersChart').getContext('2d');
+  new Chart(ordersCtx, {
+    type: 'bar',
+    data: {
+      labels: ordersData.map(d => d.date),
+      datasets: [{
+        label: '📦 Поръчки',
+        data: ordersData.map(d => d.count),
+        backgroundColor: '#00ff00'
+      }]
+    }
+  });
+
+  const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+  new Chart(revenueCtx, {
+    type: 'line',
+    data: {
+      labels: revenueData.map(d => d.date),
+      datasets: [{
+        label: '💰 Приходи (лв)',
+        data: revenueData.map(d => d.total),
+        borderColor: '#ff0000',
+        fill: false
+      }]
+    }
+  });
+</script>
 </body>
 </html>
