@@ -70,7 +70,8 @@
                             
                             <div class="product-actions">
                                 <% if (user) { %>
-                                    <button class="btn-buy" onclick="openPurchaseModal(<%= product.id %>, '<%= product.name.replace(/'/g, "\\'") %>', <%= product.price %>)">
+                                    <button class="btn-buy" onclick="openPurchaseModal(<%= product.id %>, '<%= product.name.replace(/'/g, "\\'").replace(/"/g, '&quot;') %>'
+, <%= product.price %>)">
                                         🛒 BUY NOW
                                     </button>
                                 <% } else { %>
