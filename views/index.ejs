@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TumnataMreja – Market</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,...
+    <!-- (твоя data-URI за иконата) -->
+  " />
+</head>
+<body>
+  <!-- Matrix background -->
+  <div class="matrix-bg" id="matrixBg"></div>
+
+  <!-- HEADER / NAV -->
+  <header>
+    <nav class="container">
+      <div class="logo glitch" data-text="">
+        <img
+          src="https://i.postimg.cc/nL66r5Kh/logo.png"
+          alt="logo"
+          class="logo-img"
+        />
+        <div class="logo-text"></div>
+      </div>
+      <div class="nav-links">
+        <a href="/">НАЧАЛО</a>
+
+        <% if (user) { %>
+          <a href="/dashboard">СИСТЕМА</a>
+          <a href="/logout">ИЗХОД</a>
+          <span
+            class="user-badge"
+            style="color:#00ff00; border:1px solid #00ff00; padding:0.3rem 0.8rem;"
+          >
+            USER: <%= user.username.toUpperCase() %>
+          </span>
+        <% } else { %>
+          <a href="/login">🔒 LOGIN</a>
+          <a href="/register" class="btn">➕ REGISTER</a>
+        <% } %>
+      </div>
+    </nav>
+  </header>
+
+  <!-- MAIN -->
+  <main>
+    <section class="products-section">
+      <div class="container">
+
+        <!-- Ако не е логнат – препоръка за регистрация -->
+        <% if (!user) { %>
+          <div class="auth-prompt">
+            <h1>⚠️ РЕГИСТРИРАЙ СЕ – NO KYC ⚠️</h1>
+            <p>Необходимо е да имаш регистрация, за да разглеждаш и купуваш.</p>
+            <div class="auth-buttons">
+              <a href="/login" class="btn-auth">🔒 LOGIN</a>
+              <a href="/register" class="btn-auth">➕ REGISTER</a>
+            </div>
+          </div>
+        <% } %>
+
+        <!-- Заглавие -->
+        <h2
+          class="section-title glitch"
+          data-text="📖 ПРОДУКТИ / PRODUCTS"
+        >
+          📖 ПРОДУКТИ / PRODUCTS
+        </h2>
+
+        <!-- Grid с продукти -->
+        <div class="products-grid">
+          <% products.forEach(product => { %>
+            <div class="product-card">
+              <img
+                src="<%= product.image %>"
+                alt="<%= product.name %>"
+                width="150"
+              />
+              <h2><%= product.name %></h2>
+              <p><%= product.description %></p>
+              <p><%= product.price.toFixed(2) %> лв.</p>
+
+              <% if (user) { %>
+                <form
+                  action="/buy/<%= product.id %>"
+                  method="POST"
+                  style="margin-top:0.5rem;"
+                >
+                  <input
+                    type="number"
+                    name="quantity"
+                    value="1"
+                    min="1"
+                    style="width:50px;"
+                  />
+                  <button type="submit" class="btn-buy">🛒 Купи</button>
+                </form>
+              <% } else { %>
+                <button
+                  class="btn-buy btn-disabled"
+                  onclick="alert('ACCESS DENIED – LOGIN REQUIRED!')"
+                >
+                  🔒 ACCESS DENIED
+                </button>
+              <% } %>
+            </div>
+          <% }) %>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- HERO / BANNER -->
+    <section class="hero">
+      <div class="container">
+        <center>
+          <img
+            src="https://i.postimg.cc/zX8YT9sL/banner.png"
+            alt="banner"
+            style="border:0;"
+          />
+        </center>
+        <div class="hero-features">
+          <div class="feature-badge">🔒 ANONYMOUS</div>
+          <div class="feature-badge">⚡ НЕЗАБАВНО</div>
+          <div class="feature-badge">💀 UNTRACEABLE</div>
+          <div class="feature-badge">🌐 24/7 ONLINE</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <p>© 2025 TUMNATAMREJA | ANONYMOUS • SECURE • UNTRACEABLE</p>
+    </div>
+  </footer>
+
+  <!-- SCRIPTS -->
+  <script>
+    // Matrix rain effect
+    function createMatrix() {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const matrixBg = document.getElementById('matrixBg');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      matrixBg.appendChild(canvas);
+      const chars = '01';
+      const fontSize = 10;
+      const columns = canvas.width / fontSize;
+      const drops = Array(columns).fill(1);
+      function draw() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#00ff00';
+        ctx.font = fontSize + 'px monospace';
+        drops.forEach((y, i) => {
+          const text = chars[Math.floor(Math.random() * chars.length)];
+          ctx.fillText(text, i * fontSize, y * fontSize);
+          if (y * fontSize > canvas.height && Math.random() > 0.975) {
+            drops[i] = 0;
+          }
+          drops[i]++;
+        });
+      }
+      setInterval(draw, 50);
+    }
+    window.addEventListener('load', createMatrix);
+
+    // Glitch effect for headings
+    setInterval(() => {
+      document.querySelectorAll('.glitch').forEach(el => {
+        if (Math.random() > 0.9) {
+          el.style.animation = 'none';
+          setTimeout(() => {
+            el.style.animation = 'glitch 0.3s linear';
+          }, 10);
+        }
+      });
+    }, 2000);
+  </script>
+</body>
+</html>
