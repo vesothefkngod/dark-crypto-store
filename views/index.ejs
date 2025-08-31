@@ -875,13 +875,29 @@ function openPurchaseModal(productId, productName, price) {
         }
 
         // Update total when quantity changes
-        document.addEventListener('DOMContentLoaded', function() {
-            const quantityInput = document.getElementById('modalQuantity');
-            if (quantityInput) {
-                quantityInput.addEventListener('input', function() {
-                    const quantity = parseInt(this.value) || 1;
-                    const total = currentProductPrice * quantity;
-                    document.getElementById('modalTotal').value = '<!DOCTYPE html>
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработка на промяна в количеството
+    const quantityInput = document.getElementById('modalQuantity');
+    if (quantityInput) {
+        quantityInput.addEventListener('input', function() {
+            const quantity = parseInt(this.value) || 1;
+            const total = currentProductPrice * quantity;
+            document.getElementById('modalTotal').value = total.toFixed(2);
+        });
+    }
+
+    // Обработка на избор на доставчик
+    const providerBtns = document.querySelectorAll('.provider-btn');
+    providerBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            providerBtns.forEach(b => b.classList.remove('selected'));
+            this.classList.add('selected');
+            selectedProvider = this.dataset.provider;
+        });
+    });
+});
+
+<!DOCTYPE html>
 <html lang="bg">
 <head>
     <meta charset="UTF-8">
@@ -889,92 +905,70 @@ function openPurchaseModal(productId, productName, price) {
     <title>💀 TumnataMreja - Underground Market</title>
 
             // Provider selection
-            const providerBtns = document.querySelectorAll('.provider-btn');
-            providerBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    providerBtns.forEach(b => b.classList.remove('selected'));
-                    this.classList.add('selected');
-                    selectedProvider = this.dataset.provider;
-                });
-            });
-        });
+const providerBtns = document.querySelectorAll('.provider-btn');
+providerBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+        providerBtns.forEach(b => b.classList.remove('selected'));
+        this.classList.add('selected');
+        selectedProvider = this.dataset.provider;
+    });
+});
 
-        async function processPurchase() {
-            if (!currentProductId) return;
 
-            const quantity = parseInt(document.getElementById('modalQuantity').value) || 1;
-            const currency = document.getElementById('modalCurrency').value;
-            const purchaseBtn = document.getElementById('purchaseBtn');
-            const resultDiv = document.getElementById('paymentResult');
+async function processPurchase() {
+  if (!currentProductId) return;
 
-            // Disable button and show loading
-            purchaseBtn.disabled = true;
-            purchaseBtn.innerHTML = '<span class="loading"></span> INITIALIZING...';
-            
-            try {
-                const response = await fetch(`/buy/${currentProductId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        quantity: quantity,
-                        provider: selectedProvider,
-                        currency: currency
-                    })
-                });
+  const quantity = parseInt(document.getElementById('modalQuantity').value) || 1;
+  const currency = document.getElementById('modalCurrency').value;
+  const provider = selectedProvider;
 
-                const result = await response.json();
+  if (!provider) {
+    alert('Моля, избери доставчик за плащане.');
+    return;
+  }
 
-                if (result.success) {
-                    resultDiv.className = 'payment-result payment-success';
-                    resultDiv.innerHTML = `
-                        <h4>✅ PAYMENT INITIALIZED</h4>
-                        <p><strong>PAYMENT ID:</strong> ${result.paymentId}</p>
-                        <p><strong>AMOUNT:</strong> ${result.cryptoAmount} ${result.cryptoCurrency}</p>
-                        <p><strong>ADDRESS:</strong></p>
-                        <div style="font-family: monospace; word-break: break-all; color: #00ff00; border: 1px solid #00ff00; padding: 0.5rem; margin: 1rem 0;">
-                            ${result.address}
-                        </div>
-                        <div style="margin: 1rem 0;">
-                            <a href="${result.paymentUrl}" target="_blank" class="btn" style="margin-right: 1rem;">
-                                🌐 OPEN PAYMENT
-                            </a>
-                            <button onclick="copyToClipboard('${result.address}')" class="btn">
-                                📋 COPY ADDRESS
-                            </button>
-                        </div>
-                        <small style="color: #00cc00;">PAYMENT EXPIRES IN 30 MINUTES</small>
-                    `;
-                    resultDiv.style.display = 'block';
-                    
-                    // Auto close modal after 5 seconds and redirect to dashboard
-                    setTimeout(() => {
-                        closePurchaseModal();
-                        window.location.href = '/dashboard';
-                    }, 5000);
-                    
-                } else {
-                    throw new Error(result.error || 'PAYMENT INITIALIZATION FAILED');
-                }
+  const purchaseBtn = document.getElementById('purchaseBtn');
+  const resultDiv = document.getElementById('paymentResult');
 
-            } catch (error) {
-                console.error('Purchase error:', error);
-                resultDiv.className = 'payment-result payment-error';
-                resultDiv.innerHTML = `
-                    <h4>❌ PAYMENT FAILED</h4>
-                    <p>${error.message}</p>
-                    <button onclick="location.reload()" class="btn" style="margin-top: 1rem;">
-                        🔄 RETRY
-                    </button>
-                `;
-                resultDiv.style.display = 'block';
-            } finally {
-                // Re-enable button
-                purchaseBtn.disabled = false;
-                purchaseBtn.innerHTML = '🚀 INITIALIZE PAYMENT';
-            }
-        }
+  purchaseBtn.disabled = true;
+  purchaseBtn.innerHTML = '<span class="loading"></span> INITIALIZING...';
+
+  try {
+    const response = await fetch(`/buy/${currentProductId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity, provider, currency })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      resultDiv.className = 'payment-result payment-success';
+      resultDiv.innerHTML = `
+        <h4>✅ ПОРЪЧКАТА Е СЪЗДАДЕНА</h4>
+        <p><strong>ID:</strong> ${result.paymentId}</p>
+        <p><strong>Сума:</strong> ${result.cryptoAmount} ${result.cryptoCurrency}</p>
+        <p><strong>Адрес:</strong></p>
+        <div style="font-family: monospace; word-break: break-all;">${result.address}</div>
+        <a href="${result.paymentUrl}" target="_blank" class="btn">🌐 Плати с ${provider.toUpperCase()}</a>
+      `;
+      resultDiv.style.display = 'block';
+      setTimeout(() => {
+        closePurchaseModal();
+        window.location.href = '/dashboard';
+      }, 5000);
+    } else {
+      throw new Error(result.error || 'Грешка при създаване на поръчка');
+    }
+  } catch (error) {
+    resultDiv.className = 'payment-result payment-error';
+    resultDiv.innerHTML = `<h4>❌ Грешка</h4><p>${error.message}</p>`;
+    resultDiv.style.display = 'block';
+  } finally {
+    purchaseBtn.disabled = false;
+    purchaseBtn.innerHTML = '🚀 INITIALIZE PAYMENT';
+  }
+}
 
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => {
