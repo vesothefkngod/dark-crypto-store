@@ -45,7 +45,7 @@
   </header>
 
   <!-- MAIN -->
-  <main>
+  <main class="container">
     <section class="products-section">
       <div class="container">
 
@@ -62,53 +62,25 @@
         <% } %>
 
         <!-- Заглавие -->
-        <h2
-          class="section-title glitch"
-          data-text="📖 ПРОДУКТИ / PRODUCTS"
-        >
-          📖 ПРОДУКТИ / PRODUCTS
-        </h2>
-
-        <!-- Grid с продукти -->
-        <div class="products-grid">
-          <% products.forEach(product => { %>
-            <div class="product-card">
-              <img
-                src="<%= product.image %>"
-                alt="<%= product.name %>"
-                width="150"
-              />
-              <h2><%= product.name %></h2>
-              <p><%= product.description %></p>
-              <p><%= product.price.toFixed(2) %> лв.</p>
-
-              <% if (user) { %>
-                <form
-                  action="/buy/<%= product.id %>"
-                  method="POST"
-                  style="margin-top:0.5rem;"
-                >
-                  <input
-                    type="number"
-                    name="quantity"
-                    value="1"
-                    min="1"
-                    style="width:50px;"
-                  />
-                  <button type="submit" class="btn-buy">🛒 Купи</button>
-                </form>
-              <% } else { %>
-                <button
-                  class="btn-buy btn-disabled"
-                  onclick="alert('ACCESS DENIED – LOGIN REQUIRED!')"
-                >
-                  🔒 ACCESS DENIED
-                </button>
-              <% } %>
-            </div>
-          <% }) %>
+         <h1>📖 ПРОДУКТИ</h1>
+    <div class="products-grid">
+      <% products.forEach(p => { %>
+        <div class="product-card">
+          <img src="<%= p.image %>" alt="<%= p.name %>" width="120"/>
+          <h3><%= p.name %></h3>
+          <p><%= p.description %></p>
+          <p><%= p.price.toFixed(2) %> лв.</p>
+          <% if (user) { %>
+            <form action="/buy/<%= p.id %>" method="POST">
+              <input type="number" name="quantity" value="1" min="1" style="width:40px"/>
+              <button type="submit">🛒 Купи</button>
+            </form>
+          <% } else { %>
+            <button onclick="alert('Моля влезте, за да купувате')">🔒</button>
+          <% } %>
         </div>
-
+      <% }) %>
+    </div>
       </div>
     </section>
 
