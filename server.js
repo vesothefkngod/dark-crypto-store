@@ -3,6 +3,38 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const crypto = require('crypto');
 const axios = require('axios');
+const CRYPTO_CONFIG = {
+  wolvpay: {
+    apiUrl: process.env.WOLVPAY_API_URL,
+    merchantKey: process.env.WOLVPAY_MERCHANT_KEY
+  }
+};
+
+async function createWolvPayInvoice(orderId, amount, currency, description, req) {
+  const payload = {
+    merchant: CRYPTO_CONFIG.wolvpay.merchantKey,
+    invoiceValue: amount,
+    currency: currency,
+    description: description,
+    callbackUrl: `${req.protocol}://${req.get('host')}/webhook/wolvpay`,
+    returnUrl:  `${req.protocol}://${req.get('host')}/payment-success?order=${orderId}`,
+    lifetime: 30
+  };
+
+  const response = await axios.post(
+    `${CRYPTO_CONFIG.wolvpay.apiUrl}/invoice`,
+    payload
+  );
+
+  // Върни данните за плащане към маршрута
+  return {
+    paymentId:   response.data.invoiceId,
+    paymentUrl:  response.data.paymentUrl,
+    address:     response.data.address,
+    cryptoAmount:response.data.cryptoAmount,
+    qrCode:      response.data.qrCode
+  };
+}
 const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
