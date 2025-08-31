@@ -4,14 +4,14 @@ const path = require('path');
 const crypto = require('crypto');
 const axios = require('axios');
 const CRYPTO_CONFIG = {
-  wolvpay: {
-    apiUrl: process.env.WOLVPAY_API_URL,
-    merchantKey: process.env.WOLVPAY_MERCHANT_KEY,
-    webhookSecret: process.env.WOLVPAY_WEBHOOK_SECRET
-  }
-};
-async function createWolvPayInvoice(orderId, amount, currency, description, req) {
-  const payload = {
+     wolvpay: {
+       apiUrl:       process.env.WOLVPAY_API_URL,
+       merchantKey:  process.env.WOLVPAY_MERCHANT_KEY,
+@@ -20,7 +20,12 @@ const CRYPTO_CONFIG = {
+ };
+
+    async function createWolvPayInvoice(orderId, amount, currency, description, req) {
+    const payload = {
     merchant:    CRYPTO_CONFIG.wolvpay.merchantKey,
     invoiceValue: amount,
     currency:     currency,
@@ -34,11 +34,14 @@ async function createWolvPayInvoice(orderId, amount, currency, description, req)
     qrCode:       response.data.qrCode
   };
 }
-const bcrypt = require('bcrypt');
-const cookieParser = require('cookie-parser');
-const cors = require('cors');
 
-const app = express();
+const bcrypt        = require('bcrypt');
+ const cookieParser  = require('cookie-parser');
+ const cors          = require('cors');
+ const app           = express();
+@@ -300,10 +305,6 @@ app.get('/payment-success', (req, res) => {
+     });
+   });
 const port = process.env.PORT || 3000;
 
 // Middleware
@@ -331,6 +334,5 @@ app.get('/payment-success', requireAuth, (req, res) => {
 });  // ← затваряме app.get('/payment-success')
 
 // Стартиране на сървъра
-app.listen(port, () => {
-  console.log(`🚀 Server listening on http://localhost:${port}`);
-});
+ app.listen(port, () => {
+   console.log(`🚀 Server listening on http://localhost:${port}`);
