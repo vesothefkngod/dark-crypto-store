@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="/css/style.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>💀 TumnataMreja - Underground Market</title>
+    <title>TumnataMreja - Underground Market</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💀</text></svg>">
 </head>
 <body>
@@ -12,7 +12,7 @@
 
     <header>
         <nav class="container">
-            <div class="logo glitch" data-text="">💀 TumnataMreja # Market</div>
+            <div class="logo glitch" data-text=""> TumnataMreja Market</div>
             <div class="nav-links">
                 <a href="/">НАЧАЛО</a>
                 <% if (user) { %>
@@ -87,61 +87,18 @@
         </section>
     </main>
 
-    <!-- Purchase Modal -->
-    <div id="purchaseModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">💳 COMPLETE PURCHASE</h3>
-                <button class="close-modal" onclick="closePurchaseModal()">&times;</button>
-            </div>
-            
-            <div class="payment-form">
-                <div class="form-group">
-                    <label>📦 PRODUCT:</label>
-                    <input type="text" id="modalProductName" readonly>
-                </div>
-                
-                <div class="form-group">
-                    <label>📊 QUANTITY:</label>
-                    <input type="number" id="modalQuantity" min="1" max="10" value="1">
-                </div>
-                
-                <div class="form-group">
-                    <label>🪙 CRYPTOCURRENCY:</label>
-                    <select id="modalCurrency">
-                        <option value="BTC">BITCOIN (BTC)</option>
-                        <option value="ETH">ETHEREUM (ETH)</option>
-                        <option value="USDT">TETHER (USDT)</option>
-                        <option value="USDC">USD COIN (USDC)</option>
-                        <option value="LTC">LITECOIN (LTC)</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>🏦 PAYMENT PROVIDER:</label>
-                    <div class="provider-selection">
-                        <button type="button" class="provider-btn selected" data-provider="oxapay">
-                            OXAPAY
-                        </button>
-                        <button type="button" class="provider-btn" data-provider="wolvpay">
-                            WOLVPAY
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label>💰 TOTAL AMOUNT:</label>
-                    <input type="text" id="modalTotal" readonly>
-                </div>
-                
-                <button type="button" class="btn" onclick="processPurchase()" id="purchaseBtn">
-                    🚀 INITIALIZE PAYMENT
-                </button>
-                
-                <div id="paymentResult" class="payment-result" style="display: none;"></div>
-            </div>
-        </div>
-    </div>
+  <% if (user) { %>
+  <form method="POST" action="/buy/<%= product.id %>">
+    <input type="number" name="quantity" value="1" min="1" max="10">
+    <select name="provider">
+      <option value="oxapay">OXAPAY</option>
+      <option value="wolvpay">WOLVPAY</option>
+    </select>
+    <button type="submit">💸 Плати</button>
+  </form>
+<% } else { %>
+  <button onclick="alert('🔒 Моля, влезте в профила си за да направите поръчка')">🔒 Вход изисква се</button>
+<% } %>
 
     <footer>
         <div class="container">
