@@ -1,332 +1,379 @@
 // server.js
 
-const express      = require('express')
-const sqlite3      = require('sqlite3').verbose()
-const path         = require('path')
-const crypto       = require('crypto')
-const axios        = require('axios')
-const bcrypt       = require('bcrypt')
-const cookieParser = require('cookie-parser')
-const cors         = require('cors')
+const express      = require('express');
+const sqlite3      = require('sqlite3').verbose();
+const path         = require('path');
+const crypto       = require('crypto');
+const axios        = require('axios');
+const bcrypt       = require('bcrypt');
+const cookieParser = require('cookie-parser');
+const cors         = require('cors');
 
-const app  = express()
-const port = process.env.PORT || 3000
+const app  = express();
+const port = process.env.PORT || 3000;
 
-// —————————————————————————————
-// Configuration
-// —————————————————————————————
+// Сесии в памет
+const sessions = {};
 
-// Secret for signing form timestamps
-const FORM_SECRET = process.env.FORM_SECRET
-if (!FORM_SECRET) {
-  console.error('❌ Missing FORM_SECRET environment variable')
-  process.exit(1)
-}
-
-// Session cookie secret
-const SESSION_SECRET = process.env.SESSION_SECRET || 'fallback-session-secret'
-
-// WolvePay API & webhook secrets
+// Конфигурации за WolvPay (от ENV)
 const CRYPTO_CONFIG = {
   wolvpay: {
-    apiKey        : process.env.WOLVPAY_API_KEY || '',
-    secret        : process.env.WOLVPAY_SECRET || '',
-    webhookSecret : process.env.WOLVPAY_WEBHOOK_SECRET || ''
+    apiUrl        : process.env.WOLVPAY_API_URL,
+    merchantKey   : process.env.WOLVPAY_MERCHANT_KEY,
+    webhookSecret : process.env.WOLVPAY_WEBHOOK_SECRET
   }
-}
+};
 
-// —————————————————————————————
-// Database
-// —————————————————————————————
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
+app.set('view engine', 'ejs');
 
-const DB_FILE = process.env.DB_FILE || 'database.sqlite'
-const db = new sqlite3.Database(DB_FILE, err => {
-  if (err) console.error('DB error:', err)
-  else console.log(`✅ SQLite connected: ${DB_FILE}`)
-})
+// Инициализация на SQLite база
+const db = new sqlite3.Database(path.join(__dirname, 'store.sqlite'));
+db.serialize(() => {
+  // Потребители
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      username          TEXT    UNIQUE NOT NULL,
+      password_hash     TEXT    NOT NULL,
+      telegram_username TEXT
+    )
+  `);
 
-// —————————————————————————————
-// App middleware
-// —————————————————————————————
+  // Продукти
+  db.run(`
+    CREATE TABLE IF NOT EXISTS products (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      name        TEXT    NOT NULL,
+      description TEXT,
+      price       REAL    NOT NULL,
+      image       TEXT,
+      stock       INTEGER DEFAULT 0
+    )
+  `);
 
-app.set('view engine', 'ejs')
-app.set('views', path.join(__dirname, 'views'))
+  // Поръчки
+  db.run(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id          INTEGER,
+      product_id       INTEGER,
+      quantity         INTEGER DEFAULT 1,
+      total_amount     REAL    NOT NULL,
+      payment_provider TEXT    DEFAULT 'wolvpay',
+      payment_status   TEXT    DEFAULT 'pending',
+      payment_id       TEXT,
+      crypto_address   TEXT,
+      crypto_amount    TEXT,
+      tx_hash          TEXT,
+      expires_at       DATETIME,
+      created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(user_id)    REFERENCES users(id),
+      FOREIGN KEY(product_id) REFERENCES products(id)
+    )
+  `);
 
-app.use(express.static(path.join(__dirname, 'public')))
-app.use(cors())
-app.use(express.json())
-app.use(express.urlencoded({ extended: false }))
-app.use(cookieParser(SESSION_SECRET))
+  // Логове на плащания
+  db.run(`
+    CREATE TABLE IF NOT EXISTS payment_logs (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id   INTEGER,
+      provider   TEXT,
+      event_type TEXT,
+      data       TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+});
 
-// —————————————————————————————
-// Helper: require authentication
-// —————————————————————————————
-
+// Проверка за логнат потребител
 function requireAuth(req, res, next) {
-  const sessionToken = req.signedCookies.session
-  if (!sessionToken) {
-    return res.redirect('/login')
+  const sid = req.cookies.sessionId;
+  if (sid && sessions[sid]) {
+    req.user = sessions[sid];
+    return next();
   }
+  res.redirect('/login');
+}
 
-  db.get(
-    'SELECT user_id FROM sessions WHERE token = ?',
-    [sessionToken],
-    (err, row) => {
-      if (err || !row) {
-        res.clearCookie('session')
-        return res.redirect('/login')
-      }
-      db.get(
-        'SELECT id, username FROM users WHERE id = ?',
-        [row.user_id],
-        (err, user) => {
-          if (err || !user) {
-            res.clearCookie('session')
-            return res.redirect('/login')
-          }
-          req.user = user
-          next()
-        }
-      )
+// Лог на webhook събития
+function logPaymentEvent(orderId, eventType, data) {
+  db.run(
+    `INSERT INTO payment_logs (order_id, provider, event_type, data)
+     VALUES (?, 'wolvpay', ?, ?)`,
+    [orderId, eventType, JSON.stringify(data)],
+    err => { if (err) console.error('Log error:', err); }
+  );
+}
+
+// Създаване на фактура в WolvPay
+async function createWolvPayInvoice(orderId, amount, currency, description, req) {
+  const payload = {
+    merchant:     CRYPTO_CONFIG.wolvpay.merchantKey,
+    invoiceValue: amount,
+    currency,
+    description,
+    callbackUrl:  `${req.protocol}://${req.get('host')}/webhook/wolvpay`,
+    returnUrl:    `${req.protocol}://${req.get('host')}/payment-success?order=${orderId}`,
+    lifetime:     30
+  };
+
+  const resp = await axios.post(
+    `${CRYPTO_CONFIG.wolvpay.apiUrl}/invoice`,
+    payload
+  );
+  const inv = resp.data;
+
+  return {
+    paymentId:    inv.invoiceId,
+    paymentUrl:   inv.paymentUrl,
+    address:      inv.address,
+    cryptoAmount: inv.cryptoAmount,
+    qrCode:       inv.qrCode
+  };
+}
+
+// — Routes —
+
+// Главна страница (списък продукти)
+app.get('/', (req, res) => {
+  db.all(`SELECT * FROM products WHERE stock > 0`, [], (err, products) => {
+    if (err) {
+      console.error('DB Error:', err);
+      return res.status(500).send('Database error');
     }
-  )
-}
+    res.render('index', {
+      products,
+      user: sessions[req.cookies.sessionId] || null
+    });
+  });
+});
 
-// —————————————————————————————
-// Anti-bot: honeypot + timing + HMAC
-// —————————————————————————————
+// Регистрация — форма
+app.get('/register', (req, res) => {
+  res.render('register', {
+    error   : null,
+    success : false,
+    values  : {}
+  });
+});
 
-function attachAntiBotParams(req, res, next) {
-  const startTime = Date.now().toString()
-  const formSig   = crypto
-    .createHmac('sha256', FORM_SECRET)
-    .update(startTime)
-    .digest('hex')
-
-  res.locals.bot = { startTime, formSig }
-  next()
-}
-
-function validateFormBotProtection(body) {
-  const now = Date.now()
-
-  // 1) Honeypot: поле "website" трябва да е празно
-  if (body.website && body.website.trim() !== '') {
-    throw new Error('Bot detected (honeypot)')
-  }
-
-  // 2) Проверка на подписа на startTime
-  const startTime   = parseInt(body.startTime, 10)
-  const expectedSig = crypto
-    .createHmac('sha256', FORM_SECRET)
-    .update(body.startTime)
-    .digest('hex')
-  if (body.formSig !== expectedSig) {
-    throw new Error('Invalid form signature')
-  }
-
-  // 3) Минимално време за попълване: 3 секунди
-  if (now - startTime < 3000) {
-    throw new Error('Form submitted too fast')
-  }
-}
-
-// —————————————————————————————
-// Routes: Public
-// —————————————————————————————
-
-// GET /register – покажи формата с анти-бот параметри
-app.get('/register', attachAntiBotParams, (req, res) => {
-  res.render('register', { error: null, values: {}, bot: res.locals.bot })
-})
-
-// POST /register – регистрирай нов потребител
+// Регистрация — submit
 app.post('/register', async (req, res) => {
-  try {
-    validateFormBotProtection(req.body)
-  } catch (botErr) {
-    return res
-      .status(400)
-      .render('register', {
-        error : botErr.message,
-        values: { username: req.body.username, telegram: req.body.telegram },
-        bot   : res.locals.bot
-      })
+  const { username, telegram, password, repeatPassword } = req.body;
+  let error = null;
+
+  if (!username || !password || !repeatPassword) {
+    error = 'Всички полета освен Telegram са задължителни';
+  } else if (password !== repeatPassword) {
+    error = 'Паролите не съвпадат';
   }
 
-  const { username, password, repeatPassword, telegram } = req.body
-
-  if (!username || username.length < 3) {
-    return res.render('register', { error: 'Потребителското име е твърде кратко', values:{ username, telegram }, bot: res.locals.bot })
+  if (error) {
+    return res.status(400).render('register', {
+      error,
+      success: false,
+      values : { username, telegram }
+    });
   }
-  if (password !== repeatPassword) {
-    return res.render('register', { error: 'Паролите не съвпадат', values:{ username, telegram }, bot: res.locals.bot })
-  }
 
-  // Проверка дали има такъв потребител
+  // Проверка за съществуващ потребител
   db.get(
-    'SELECT id FROM users WHERE username = ?',
+    `SELECT id FROM users WHERE username = ?`,
     [username],
     async (err, row) => {
-      if (err) return res.status(500).send('Server error')
+      if (err) {
+        console.error(err);
+        return res.status(500).send('Server error');
+      }
       if (row) {
-        return res.render('register', { error: 'Потребителят вече съществува', values:{ username, telegram }, bot: res.locals.bot })
+        return res.status(400).render('register', {
+          error  : 'Потребителското име вече съществува',
+          success: false,
+          values : { username, telegram }
+        });
       }
 
-      const hash = await bcrypt.hash(password, 10)
+      // Хешираме паролата и записваме
+      const hash = await bcrypt.hash(password, 10);
       db.run(
-        'INSERT INTO users (username, password_hash, telegram) VALUES (?, ?, ?)',
-        [username, hash, telegram],
+        `INSERT INTO users (username, password_hash, telegram_username)
+         VALUES (?, ?, ?)`,
+        [username, hash, telegram || null],
         err => {
-          if (err) return res.status(500).send('Server error')
-          res.redirect('/login?registered=1')
+          if (err) {
+            console.error(err);
+            return res.status(500).send('Server error');
+          }
+          res.redirect('/login?registered=1');
         }
-      )
+      );
     }
-  )
-})
+  );
+});
 
-// GET /login – форма за вход
-app.get('/login', attachAntiBotParams, (req, res) => {
+// Вход — форма
+app.get('/login', (req, res) => {
   res.render('login', {
     error  : null,
-    success: req.query.registered === '1',
-    bot    : res.locals.bot
-  })
-})
+    success: req.query.registered === '1'
+  });
+});
 
-// POST /login – влизане в системата
+// Вход — submit
 app.post('/login', (req, res) => {
-  try {
-    validateFormBotProtection(req.body)
-  } catch (botErr) {
-    return res
-      .status(400)
-      .render('login', { error: botErr.message, success: false, bot: res.locals.bot })
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).render('login', {
+      error  : 'Потребителско име и парола са задължителни',
+      success: false
+    });
   }
 
-  const { username, password } = req.body
   db.get(
-    'SELECT id, password_hash FROM users WHERE username = ?',
+    `SELECT id, password_hash FROM users WHERE username = ?`,
     [username],
     async (err, user) => {
-      if (err) return res.status(500).send('Server error')
-      if (!user) {
-        return res.render('login', { error: 'Невалидни данни', success: false, bot: res.locals.bot })
+      if (err) {
+        console.error(err);
+        return res.status(500).send('Server error');
       }
-
-      const match = await bcrypt.compare(password, user.password_hash)
-      if (!match) {
-        return res.render('login', { error: 'Невалидни данни', success: false, bot: res.locals.bot })
+      if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+        return res.status(400).render('login', {
+          error  : 'Невалидни данни',
+          success: false
+        });
       }
-
-      // Генерираме сесия
-      const token = crypto.randomBytes(16).toString('hex')
-      db.run('INSERT INTO sessions (user_id, token) VALUES (?, ?)', [user.id, token], err => {
-        if (err) return res.status(500).send('Server error')
-        res.cookie('session', token, { signed: true, httpOnly: true })
-        res.redirect('/products')
-      })
+      // Успешен login
+      const sessionId = crypto.randomBytes(16).toString('hex');
+      sessions[sessionId] = { id: user.id, username };
+      res.cookie('sessionId', sessionId, { httpOnly: true });
+      res.redirect('/');
     }
-  )
-})
+  );
+});
 
-// GET /logout – затвори сесията
+// Изход
 app.get('/logout', (req, res) => {
-  const sessionToken = req.signedCookies.session
-  if (sessionToken) {
-    db.run('DELETE FROM sessions WHERE token = ?', [sessionToken])
-    res.clearCookie('session')
+  const sid = req.cookies.sessionId;
+  if (sid) {
+    delete sessions[sid];
+    res.clearCookie('sessionId');
   }
-  res.redirect('/login')
-})
+  res.redirect('/');
+});
 
-// —————————————————————————————
-// Routes: Protected
-// —————————————————————————————
+// Buy — създава поръчка и пренасочва към WolvPay
+app.post('/buy/:productId', requireAuth, async (req, res) => {
+  const userId    = req.user.id;
+  const productId = parseInt(req.params.productId, 10);
+  const quantity  = Math.max(1, parseInt(req.body.quantity, 10) || 1);
 
-// GET /products – списък продукти
-app.get('/products', requireAuth, (req, res) => {
-  db.all('SELECT * FROM products', (err, products) => {
-    if (err) return res.status(500).send('Server error')
-    res.render('products', { products, user: req.user })
-  })
-})
+  db.get(
+    `SELECT * FROM products WHERE id = ? AND stock >= ?`,
+    [productId, quantity],
+    async (err, product) => {
+      if (err || !product) {
+        return res.status(400).send('Продуктът не е наличен');
+      }
 
-// GET /buy – започни плащане
-app.get('/buy', requireAuth, async (req, res) => {
-  const id = parseInt(req.query.id, 10)
-  db.get('SELECT * FROM products WHERE id = ?', [id], async (err, product) => {
-    if (err || !product) {
-      return res.status(404).send('Product not found')
-    }
+      const total     = product.price * quantity;
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
-    // Създаване на инвойс в WolvPay
-    try {
-      const resp = await axios.post(
-        'https://api.wolvpay.com/v1/invoice',
-        {
-          amount     : product.price,
-          currency   : product.currency,
-          description: product.name,
-          order_id   : crypto.randomBytes(8).toString('hex'),
-          callback_url: `${req.protocol}://${req.get('host')}/webhook/wolvpay`
-        },
-        { headers: { 'Authorization': `Bearer ${CRYPTO_CONFIG.wolvpay.apiKey}` } }
-      )
-
-      const { invoice_id, payment_url } = resp.data
       // Записваме поръчката
       db.run(
         `INSERT INTO orders
-           (user_id, product_id, payment_id, payment_status, created_at)
-         VALUES (?, ?, ?, 'pending', CURRENT_TIMESTAMP)`,
-        [req.user.id, product.id, invoice_id],
-        () => {
-          res.redirect(payment_url)
+           (user_id, product_id, quantity, total_amount, expires_at)
+         VALUES (?, ?, ?, ?, ?)`,
+        [userId, productId, quantity, total, expiresAt],
+        async function (err) {
+          if (err) {
+            console.error(err);
+            return res.status(500).send('Неуспешна поръчка');
+          }
+          const orderId = this.lastID;
+
+          try {
+            const invoice = await createWolvPayInvoice(
+              orderId,
+              total,
+              'USD',
+              `Поръчка #${orderId} – ${product.name}`,
+              req
+            );
+
+            // Обновяваме поръчката с детайли
+            db.run(
+              `UPDATE orders
+                 SET payment_id    = ?,
+                     crypto_address = ?,
+                     crypto_amount  = ?
+               WHERE id = ?`,
+              [
+                invoice.paymentId,
+                invoice.address,
+                invoice.cryptoAmount,
+                orderId
+              ]
+            );
+
+            // Намаляваме наличност
+            db.run(
+              `UPDATE products SET stock = stock - ? WHERE id = ?`,
+              [quantity, productId]
+            );
+
+            logPaymentEvent(orderId, 'created', invoice);
+
+            // Пренасочване към paymentUrl
+            res.redirect(invoice.paymentUrl);
+          } catch (e) {
+            console.error('WolvPay error:', e);
+            res.status(500).send('Грешка при създаване на фактура');
+          }
         }
-      )
-    } catch (e) {
-      console.error(e)
-      res.status(500).send('Payment initialization failed')
+      );
     }
-  })
-})
+  );
+});
 
-// —————————————————————————————
-// Webhook & Success
-// —————————————————————————————
-
-// WolvPay webhook
+// Webhook от WolvPay
 app.post('/webhook/wolvpay', express.json(), (req, res) => {
-  const signature = req.headers['x-wolvpay-signature'] || ''
-  const expected  = crypto
+  const sig      = req.headers['x-wolvpay-signature'] || '';
+  const expected = crypto
     .createHmac('sha256', CRYPTO_CONFIG.wolvpay.webhookSecret)
     .update(JSON.stringify(req.body))
-    .digest('hex')
+    .digest('hex');
 
-  if (signature !== expected) {
-    return res.status(401).send('Invalid signature')
+  if (sig !== expected) {
+    return res.status(401).send('Invalid signature');
   }
 
-  const { invoice_id, status, txID } = req.body
+  const { invoice_id, status, txID } = req.body;
   if (status.toLowerCase() === 'completed') {
     db.run(
       `UPDATE orders
          SET payment_status = 'completed',
-             tx_hash       = ?,
-             updated_at    = CURRENT_TIMESTAMP
+             tx_hash        = ?,
+             updated_at     = CURRENT_TIMESTAMP
        WHERE payment_id = ?`,
       [txID, invoice_id]
-    )
-    console.log(`✅ Payment completed for invoice ${invoice_id}`)
+    );
+    logPaymentEvent(invoice_id, 'completed', req.body);
   }
-  res.json({ success: true })
-})
+  res.json({ success: true });
+});
 
-// Страница за успех
+// Страница след успешно плащане
 app.get('/payment-success', requireAuth, (req, res) => {
-  const orderId = parseInt(req.query.order, 10)
+  const orderId = parseInt(req.query.order, 10);
   db.get(
     `SELECT o.*, p.name AS product_name
        FROM orders o
@@ -335,29 +382,21 @@ app.get('/payment-success', requireAuth, (req, res) => {
     [orderId, req.user.id],
     (err, order) => {
       if (err || !order) {
-        return res.status(404).send('Order not found')
+        return res.status(404).send('Поръчката не е намерена');
       }
-      res.render('success', { order })
+      res.render('success', { order });
     }
-  )
-})
+  );
+});
 
-// —————————————————————————————
 // 404 & Error handlers
-// —————————————————————————————
-
-app.use((req, res) => {
-  res.status(404).render('404', { url: req.originalUrl })
-})
+app.use((req, res) => res.status(404).render('404', { url: req.originalUrl }));
 app.use((err, req, res, next) => {
-  console.error(err.stack)
-  res.status(500).send('Server error')
-})
+  console.error(err.stack);
+  res.status(500).send('Server error');
+});
 
-// —————————————————————————————
 // Стартиране на сървъра
-// —————————————————————————————
-
 app.listen(port, () => {
-  console.log(`🚀 Server listening on http://localhost:${port}`)
-})
+  console.log(`🚀 Server listening on http://localhost:${port}`);
+});
