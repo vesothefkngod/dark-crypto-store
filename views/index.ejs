@@ -847,13 +847,16 @@
         let currentProductPrice = 0;
         let selectedProvider = 'oxapay';
 
-        function openPurchaseModal(productId, productName, price) {
-            currentProductId = productId;
-            currentProductPrice = price;
-            
-            document.getElementById('modalProductName').value = productName;
-            document.getElementById('modalQuantity').value = 1;
-            document.getElementById('modalTotal').value = '<!DOCTYPE html>
+function openPurchaseModal(productId, productName, price) {
+  currentProductId = productId;
+  currentProductPrice = price;
+  document.getElementById('modalProductName').value = productName;
+  document.getElementById('modalQuantity').value = 1;
+  document.getElementById('modalTotal').value = price.toFixed(2); // ✅ правилно
+  document.getElementById('purchaseModal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+<!DOCTYPE html>
 <html lang="bg">
 <head>
     <meta charset="UTF-8">
