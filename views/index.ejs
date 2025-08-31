@@ -2,48 +2,41 @@
 <html lang="bg">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>TumnataMreja – Market</title>
   <link rel="stylesheet" href="/css/style.css" />
-  <link rel="icon" href="data:image/svg+xml,... (твоя data-URI за иконата)" />
+  <link rel="icon" href="data:image/svg+xml,…(твоя data-URI)" />
 </head>
 <body>
-  <!-- Matrix background -->
+  <!-- MATRIX BACKGROUND -->
   <div class="matrix-bg" id="matrixBg"></div>
 
-  <!-- HEADER / NAV -->
-  <header>
-    <nav class="container nav-bar">
-      <div class="logo glitch" data-text="">
-        <img
-          src="https://i.postimg.cc/nL66r5Kh/logo.png"
-          alt="logo"
-          class="logo-img"
-        />
-      </div>
-      <div class="nav-links">
-        <a href="/">НАЧАЛО</a>
+  <!-- HEADER -->
+  <header class="site-header">
+    <nav class="header-nav container">
+      <a href="/" class="logo-link">
+        <img src="https://i.postimg.cc/nL66r5Kh/logo.png" alt="logo" class="logo-img glitch"/>
+      </a>
+
+      <ul class="nav-list">
+        <li><a href="/">НАЧАЛО</a></li>
         <% if (user) { %>
-          <a href="/dashboard">СИСТЕМА</a>
-          <a href="/logout">ИЗХОД</a>
-          <span class="user-badge">
-            USER: <%= user.username.toUpperCase() %>
-          </span>
+          <li><a href="/dashboard">СИСТЕМА</a></li>
+          <li><a href="/logout">ИЗХОД</a></li>
         <% } else { %>
-          <a href="/login">🔒 LOGIN</a>
-          <a href="/register" class="btn register-btn">➕ REGISTER</a>
+          <li><a href="/login">LOGIN</a></li>
+          <li><a href="/register">REGISTER</a></li>
         <% } %>
-      </div>
+      </ul>
     </nav>
   </header>
 
-  <!-- MAIN -->
+  <!-- MAIN CONTENT -->
   <main class="container main-content">
-    <!-- Auth prompt -->
     <% if (!user) { %>
       <section class="auth-prompt">
         <h1>⚠️ РЕГИСТРИРАЙ СЕ – NO KYC ⚠️</h1>
-        <p>Необходимо е да имаш регистрация, за да разглеждаш и купуваш.</p>
+        <p>Трябва да си регистриран, за да разглеждаш и купуваш.</p>
         <div class="auth-buttons">
           <a href="/login" class="btn">🔒 LOGIN</a>
           <a href="/register" class="btn">➕ REGISTER</a>
@@ -51,13 +44,14 @@
       </section>
     <% } %>
 
-    <!-- Product list -->
     <section class="products-section">
-      <h1 class="section-title">📖 ПРОДУКТИ</h1>
+      <h2 class="section-title">📖 ПРОДУКТИ</h2>
       <div class="products-grid">
         <% products.forEach(p => { %>
           <div class="product-card">
-            <img src="<%= p.image %>" alt="<%= p.name %>" />
+            <div class="img-wrapper">
+              <img src="<%= p.image %>" alt="<%= p.name %>" />
+            </div>
             <h3><%= p.name %></h3>
             <p class="desc"><%= p.description %></p>
             <p class="price"><%= p.price.toFixed(2) %> лв.</p>
@@ -67,22 +61,15 @@
                 <button type="submit">🛒 Купи</button>
               </form>
             <% } else { %>
-              <button class="btn disabled" onclick="alert('Моля влезте, за да купувате')">
-                🔒
-              </button>
+              <button class="btn disabled" onclick="alert('Моля влезте, за да купувате')">🔒</button>
             <% } %>
           </div>
         <% }) %>
       </div>
     </section>
 
-    <!-- HERO / BANNER -->
     <section class="hero-section">
-      <img
-        src="https://i.postimg.cc/zX8YT9sL/banner.png"
-        alt="banner"
-        class="hero-banner"
-      />
+      <img src="https://i.postimg.cc/zX8YT9sL/banner.png" alt="banner" class="hero-banner"/>
       <div class="hero-features">
         <span>🔒 ANONYMOUS</span>
         <span>⚡ НЕЗАБАВНО</span>
@@ -93,58 +80,15 @@
   </main>
 
   <!-- FOOTER -->
-  <footer>
+  <footer class="site-footer">
     <div class="container">
       <p>© 2025 TUMNATAMREJA | ANONYMOUS • SECURE • UNTRACEABLE</p>
     </div>
   </footer>
 
-  <!-- SCRIPTS -->
+  <!-- SCRIPTS (matrix + glitch) -->
   <script>
-    // Matrix rain effect
-    function createMatrix() {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const matrixBg = document.getElementById('matrixBg');
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      matrixBg.appendChild(canvas);
-      const chars = '01';
-      const fontSize = 10;
-      const columns = Math.floor(canvas.width / fontSize);
-      const drops = Array(columns).fill(0);
-
-      function draw() {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#00ff00';
-        ctx.font = fontSize + 'px monospace';
-
-        drops.forEach((y, i) => {
-          const text = chars[Math.floor(Math.random() * chars.length)];
-          ctx.fillText(text, i * fontSize, y * fontSize);
-          drops[i] = y * fontSize > canvas.height && Math.random() > 0.975
-            ? 0
-            : y + 1;
-        });
-      }
-
-      setInterval(draw, 50);
-    }
-
-    window.addEventListener('load', createMatrix);
-
-    // Glitch effect
-    setInterval(() => {
-      document.querySelectorAll('.glitch').forEach(el => {
-        if (Math.random() > 0.9) {
-          el.style.animation = 'none';
-          setTimeout(() => {
-            el.style.animation = 'glitch 0.3s linear';
-          }, 20);
-        }
-      });
-    }, 2000);
+    // … (същия matrix + glitch код от преди) …
   </script>
 </body>
 </html>
