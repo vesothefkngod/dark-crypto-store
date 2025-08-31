@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title><%= product.name %></title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div class="container">
@@ -13,8 +13,8 @@
     <p><%= product.description %></p>
     <p class="price">Цена: <%= product.price.toFixed(2) %> лв.</p>
     <form method="POST" action="/checkout/<%= product.id %>">
-      <label>Имейл (по избор)</label>
-      <input type="email" name="email" placeholder="you@domain.com">
+      <label>Telegram (по избор)</label>
+      <input type="telegram" name="telegram" placeholder="@username">
       <button type="submit">Купи сега</button>
     </form>
   </div>
