@@ -36,11 +36,7 @@ app.set('view engine', 'ejs');
 
 // Initialize enhanced database
 db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS pages (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  slug TEXT UNIQUE,
-  content TEXT
-)`);
+
 db.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
