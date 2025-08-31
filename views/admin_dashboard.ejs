@@ -23,16 +23,16 @@
           <td><%= p.stock %></td>
           <td><%= p.category %></td>
           <td>
-            <form method="POST" action="/admin/product/update/<%= p.id %>">
-              <input type="text" name="name" value="<%= p.name %>" required />
+  <form method="POST" action="/admin/product/update/<%= p.id %>">
+<input type="text" name="name" value="<%= p.name %>" required />
               <input type="number" name="price" value="<%= p.price %>" step="0.01" required />
               <input type="number" name="stock" value="<%= p.stock %>" required />
               <input type="text" name="category" value="<%= p.category %>" />
               <button type="submit">💾 Запази</button>
-<form method="POST" action="/admin/product/delete/<%= product.id %>" onsubmit="return confirm('Сигурен ли си?')">
-  <button class="btn danger">🗑️ Изтрий</button>
-</form>
-            </form>
+  </form>
+  <form method="POST" action="/admin/product/delete/<%= p.id %>">onsubmit="return confirm('Сигурен ли си?')">
+    <button class="btn danger">🗑️ Изтрий</button>
+  </form>
           </td>
         </tr>
       <% }) %>
