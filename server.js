@@ -36,87 +36,89 @@ app.set('view engine', 'ejs');
 
 // Initialize enhanced database
 db.serialize(() => {
-    db.run(`CREATE TABLE IF NOT EXISTS pages ( id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT UNIQUE, content TEXT )`);
+  db.run(`CREATE TABLE IF NOT EXISTS pages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT UNIQUE,
+    content TEXT
+  )`);
 
-db.run(`CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        email TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
+  db.run(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    email TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
 
-    // Enhanced Products table
-    db.run(`CREATE TABLE IF NOT EXISTS products (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        description TEXT,
-        price REAL NOT NULL,
-        image TEXT,
-        category TEXT DEFAULT 'general',
-        stock INTEGER DEFAULT 100,
-        featured BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
+  db.run(`CREATE TABLE IF NOT EXISTS products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    price REAL NOT NULL,
+    image TEXT,
+    category TEXT DEFAULT 'general',
+    stock INTEGER DEFAULT 100,
+    featured BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
 
-    // Enhanced Orders table
-    db.run(`CREATE TABLE IF NOT EXISTS orders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        product_id INTEGER,
-        quantity INTEGER DEFAULT 1,
-        total_amount REAL NOT NULL,
-        usd_amount REAL NOT NULL,
-        payment_provider TEXT DEFAULT 'oxapay',
-        payment_status TEXT DEFAULT 'pending',
-        payment_id TEXT,
-        crypto_currency TEXT,
-        crypto_address TEXT,
-        crypto_amount TEXT,
-        tx_hash TEXT,
-        expires_at DATETIME,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(user_id) REFERENCES users(id),
-        FOREIGN KEY(product_id) REFERENCES products(id)
-    )`);
+  db.run(`CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    product_id INTEGER,
+    quantity INTEGER DEFAULT 1,
+    total_amount REAL NOT NULL,
+    usd_amount REAL NOT NULL,
+    payment_provider TEXT DEFAULT 'oxapay',
+    payment_status TEXT DEFAULT 'pending',
+    payment_id TEXT,
+    crypto_currency TEXT,
+    crypto_address TEXT,
+    crypto_amount TEXT,
+    tx_hash TEXT,
+    expires_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id),
+    FOREIGN KEY(product_id) REFERENCES products(id)
+  )`);
 
-    // Payment logs table
-    db.run(`CREATE TABLE IF NOT EXISTS payment_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        order_id INTEGER,
-        provider TEXT,
-        event_type TEXT,
-        data TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(order_id) REFERENCES orders(id)
-    )`);
+  db.run(`CREATE TABLE IF NOT EXISTS payment_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER,
+    provider TEXT,
+    event_type TEXT,
+    data TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(order_id) REFERENCES orders(id)
+  )`);
 
-    // Add sample products if none exist
-    db.get("SELECT COUNT(*) as count FROM products", (err, row) => {
-        if (!err && row.count === 0) {
-            const products = [
-                [' CR. RONALDO 7 (1гр.) ULTRA M3TH', 'High-grade digital product with instant delivery', 99.99, 'https://i.postimg.cc/RZ0w2Yzq/Designer.png', 'new', 10, 1],
-                [' АК-47 (5гр.) HIGH QUALITY', 'Professional grade product for serious users', 99.99, 'https://i.postimg.cc/xdcyN4sB/deyne03x.png', 'new', 10, 1],
-                [' ФЛЕКС (1гр) БОЛИВИЯ', 'Essential quality product with fast shipping', 129.99, 'https://i.postimg.cc/BQmK5C13/OIP.png', 'standard', 10, 1],            ];
-            products.forEach(product => {
-                db.run("INSERT INTO products (name, description, price, image, category, stock, featured) VALUES (?, ?, ?, ?, ?, ?, ?)", product);
-            });
-            console.log('✅ Sample products added');
+  // Add sample products if none exist
+  db.get("SELECT COUNT(*) as count FROM products", (err, row) => {
+    if (!err && row.count === 0) {
+      const products = [
+        ['CR. RONALDO 7 (1гр.) ULTRA M3TH', 'High-grade digital product with instant delivery', 99.99, 'https://i.postimg.cc/RZ0w2Yzq/Designer.png', 'new', 10, 1],
+        ['АК-47 (5гр.) HIGH QUALITY', 'Professional grade product for serious users', 99.99, 'https://i.postimg.cc/xdcyN4sB/deyne03x.png', 'new', 10, 1],
+        ['ФЛЕКС (1гр) БОЛИВИЯ', 'Essential quality product with fast shipping', 129.99, 'https://i.postimg.cc/BQmK5C13/OIP.png', 'standard', 10, 1]
+      ];
+      products.forEach(product => {
+        db.run("INSERT INTO products (name, description, price, image, category, stock, featured) VALUES (?, ?, ?, ?, ?, ?, ?)", product);
+      });
+      console.log('✅ Sample products added');
+    }
+  });
+
+  // Create admin user if none exists
+  db.get("SELECT COUNT(*) as count FROM users", (err, row) => {
+    if (!err && row.count === 0) {
+      bcrypt.hash('admin123', 10, (err, hash) => {
+        if (!err) {
+          db.run("INSERT INTO users (username, password, email) VALUES (?, ?, ?)", ['admin', hash, 'admin@example.com']);
+          console.log('✅ Admin user created: admin / admin123');
         }
-    });
-
-    // Create admin user if none exists
-    db.get("SELECT COUNT(*) as count FROM users", (err, row) => {
-        if (!err && row.count === 0) {
-            bcrypt.hash('admin123', 10, (err, hash) => {
-                if (!err) {
-db.run("INSERT INTO users (username, password, email) VALUES (?, ?, ?)", 
-       ['admin', hash, 'admin@tumnamreja.com']);
-                }
-            });
-        }
-    });
+      });
+    }
+  });
 });
 
 // Session management
