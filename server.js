@@ -3,14 +3,14 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const crypto = require('crypto');
 const axios = require('axios');
+
 const CRYPTO_CONFIG = {
      wolvpay: {
        apiUrl:       process.env.WOLVPAY_API_URL,
        merchantKey:  process.env.WOLVPAY_MERCHANT_KEY,
-@@ -20,7 +20,12 @@ const CRYPTO_CONFIG = {
  };
 
-    async function createWolvPayInvoice(orderId, amount, currency, description, req) {
+async function createWolvPayInvoice(orderId, amount, currency, description, req) {
     const payload = {
     merchant:    CRYPTO_CONFIG.wolvpay.merchantKey,
     invoiceValue: amount,
