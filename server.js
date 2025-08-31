@@ -1,6 +1,5 @@
 // server.js
 
-// 1. Импорти
 const express      = require('express')
 const sqlite3      = require('sqlite3').verbose()
 const path         = require('path')
@@ -13,376 +12,292 @@ const cors         = require('cors')
 const app  = express()
 const port = process.env.PORT || 3000
 
-// 2. Конфигурация за крипто плащания (WolvPay)
+// —————————————————————————————
+// Configuration
+// —————————————————————————————
+
+// Secret for signing form timestamps
+const FORM_SECRET = process.env.FORM_SECRET
+if (!FORM_SECRET) {
+  console.error('❌ Missing FORM_SECRET environment variable')
+  process.exit(1)
+}
+
+// Session cookie secret
+const SESSION_SECRET = process.env.SESSION_SECRET || 'fallback-session-secret'
+
+// WolvePay API & webhook secrets
 const CRYPTO_CONFIG = {
   wolvpay: {
-    apiUrl        : process.env.WOLVPAY_API_URL,
-    merchantKey   : process.env.WOLVPAY_MERCHANT_KEY,
-    webhookSecret : process.env.WOLVPAY_WEBHOOK_SECRET
+    apiKey        : process.env.WOLVPAY_API_KEY || '',
+    secret        : process.env.WOLVPAY_SECRET || '',
+    webhookSecret : process.env.WOLVPAY_WEBHOOK_SECRET || ''
   }
 }
 
-// 3. Middleware
-app.use(cors())
-app.use(express.json({ limit: '10mb' }))
-app.use(express.urlencoded({ extended: true }))
-app.use(cookieParser())
-app.use(express.static(path.join(__dirname, 'public')))
-app.set('view engine', 'ejs')
+// —————————————————————————————
+// Database
+// —————————————————————————————
 
-// 4. SQLite & схеми
-const db = new sqlite3.Database(path.join(__dirname, 'store.sqlite'))
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id                INTEGER PRIMARY KEY AUTOINCREMENT,
-      username          TEXT    UNIQUE NOT NULL,
-      password          TEXT    NOT NULL,
-      telegram_username TEXT
-    )
-  `)
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS products (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      name        TEXT    NOT NULL,
-      description TEXT,
-      price       REAL    NOT NULL,
-      image       TEXT,
-      stock       INTEGER DEFAULT 0
-    )
-  `)
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS orders (
-      id              INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id         INTEGER,
-      product_id      INTEGER,
-      quantity        INTEGER DEFAULT 1,
-      total_amount    REAL    NOT NULL,
-      payment_provider TEXT   DEFAULT 'wolvpay',
-      payment_status   TEXT   DEFAULT 'pending',
-      payment_id       TEXT,
-      crypto_address   TEXT,
-      crypto_amount    TEXT,
-      tx_hash          TEXT,
-      expires_at       DATETIME,
-      created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(user_id)    REFERENCES users(id),
-      FOREIGN KEY(product_id) REFERENCES products(id)
-    )
-  `)
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS payment_logs (
-      id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      order_id   INTEGER,
-      provider   TEXT,
-      event_type TEXT,
-      data       TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `)
+const DB_FILE = process.env.DB_FILE || 'database.sqlite'
+const db = new sqlite3.Database(DB_FILE, err => {
+  if (err) console.error('DB error:', err)
+  else console.log(`✅ SQLite connected: ${DB_FILE}`)
 })
 
-// 5. Сесии и автентикация
-const sessions = {}
+// —————————————————————————————
+// App middleware
+// —————————————————————————————
+
+app.set('view engine', 'ejs')
+app.set('views', path.join(__dirname, 'views'))
+
+app.use(express.static(path.join(__dirname, 'public')))
+app.use(cors())
+app.use(express.json())
+app.use(express.urlencoded({ extended: false }))
+app.use(cookieParser(SESSION_SECRET))
+
+// —————————————————————————————
+// Helper: require authentication
+// —————————————————————————————
 
 function requireAuth(req, res, next) {
-  const sid = req.cookies.sessionId
-  if (sid && sessions[sid]) {
-    req.user = sessions[sid]
-    return next()
+  const sessionToken = req.signedCookies.session
+  if (!sessionToken) {
+    return res.redirect('/login')
   }
-  res.redirect('/login')
-}
 
-// 6. Helpers за плащане
-function logPaymentEvent(orderId, eventType, data) {
-  db.run(
-    `INSERT INTO payment_logs (order_id, provider, event_type, data)
-     VALUES (?, 'wolvpay', ?, ?)`,
-    [orderId, eventType, JSON.stringify(data)],
-    err => { if (err) console.error('Log error:', err) }
-  )
-}
-
-async function createWolvPayInvoice(orderId, amount, currency, description, req) {
-  const payload = {
-    merchant     : CRYPTO_CONFIG.wolvpay.merchantKey,
-    invoiceValue : amount,
-    currency,
-    description,
-    callbackUrl  : `${req.protocol}://${req.get('host')}/webhook/wolvpay`,
-    returnUrl    : `${req.protocol}://${req.get('host')}/payment-success?order=${orderId}`,
-    lifetime     : 30
-  }
-  const resp = await axios.post(
-    `${CRYPTO_CONFIG.wolvpay.apiUrl}/invoice`,
-    payload
-  )
-  const inv = resp.data
-  return {
-    paymentId   : inv.invoiceId,
-    paymentUrl  : inv.paymentUrl,
-    address     : inv.address,
-    cryptoAmount: inv.cryptoAmount,
-    qrCode      : inv.qrCode
-  }
-}
-
-// 7. Рути
-
-// 7.1. Начална страница (списък продукти)
-app.get('/', (req, res) => {
-  db.all(
-    `SELECT * FROM products WHERE stock > 0`,
-    [],
-    (err, products) => {
-      if (err) {
-        console.error('DB Error:', err)
-        return res.status(500).send('Database error')
+  db.get(
+    'SELECT user_id FROM sessions WHERE token = ?',
+    [sessionToken],
+    (err, row) => {
+      if (err || !row) {
+        res.clearCookie('session')
+        return res.redirect('/login')
       }
-      res.render('index', {
-        products,
-        user: sessions[req.cookies.sessionId] || null
-      })
+      db.get(
+        'SELECT id, username FROM users WHERE id = ?',
+        [row.user_id],
+        (err, user) => {
+          if (err || !user) {
+            res.clearCookie('session')
+            return res.redirect('/login')
+          }
+          req.user = user
+          next()
+        }
+      )
     }
   )
+}
+
+// —————————————————————————————
+// Anti-bot: honeypot + timing + HMAC
+// —————————————————————————————
+
+function attachAntiBotParams(req, res, next) {
+  const startTime = Date.now().toString()
+  const formSig   = crypto
+    .createHmac('sha256', FORM_SECRET)
+    .update(startTime)
+    .digest('hex')
+
+  res.locals.bot = { startTime, formSig }
+  next()
+}
+
+function validateFormBotProtection(body) {
+  const now = Date.now()
+
+  // 1) Honeypot: поле "website" трябва да е празно
+  if (body.website && body.website.trim() !== '') {
+    throw new Error('Bot detected (honeypot)')
+  }
+
+  // 2) Проверка на подписа на startTime
+  const startTime   = parseInt(body.startTime, 10)
+  const expectedSig = crypto
+    .createHmac('sha256', FORM_SECRET)
+    .update(body.startTime)
+    .digest('hex')
+  if (body.formSig !== expectedSig) {
+    throw new Error('Invalid form signature')
+  }
+
+  // 3) Минимално време за попълване: 3 секунди
+  if (now - startTime < 3000) {
+    throw new Error('Form submitted too fast')
+  }
+}
+
+// —————————————————————————————
+// Routes: Public
+// —————————————————————————————
+
+// GET /register – покажи формата с анти-бот параметри
+app.get('/register', attachAntiBotParams, (req, res) => {
+  res.render('register', { error: null, values: {}, bot: res.locals.bot })
 })
 
-// 7.2. Регистрация
-app.get('/register', (req, res) => {
-  res.render('register', {
-    error           : null,
-    values          : {},
-    recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY
-  })
-})
-
+// POST /register – регистрирай нов потребител
 app.post('/register', async (req, res) => {
-  const {
-    username,
-    telegram,
-    password,
-    repeatPassword,
-    'g-recaptcha-response': captcha
-  } = req.body
+  try {
+    validateFormBotProtection(req.body)
+  } catch (botErr) {
+    return res
+      .status(400)
+      .render('register', {
+        error : botErr.message,
+        values: { username: req.body.username, telegram: req.body.telegram },
+        bot   : res.locals.bot
+      })
+  }
 
-  // Валидация
-  if (!username || !password || !repeatPassword) {
-    return res.render('register', {
-      error           : 'Всички полета (без Telegram) са задължителни',
-      values          : { username, telegram },
-      recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY
-    })
+  const { username, password, repeatPassword, telegram } = req.body
+
+  if (!username || username.length < 3) {
+    return res.render('register', { error: 'Потребителското име е твърде кратко', values:{ username, telegram }, bot: res.locals.bot })
   }
   if (password !== repeatPassword) {
-    return res.render('register', {
-      error           : 'Паролите не съвпадат',
-      values          : { username, telegram },
-      recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY
-    })
-  }
-  if (!captcha) {
-    return res.render('register', {
-      error           : 'Маркирай "Не съм робот"',
-      values          : { username, telegram },
-      recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY
-    })
+    return res.render('register', { error: 'Паролите не съвпадат', values:{ username, telegram }, bot: res.locals.bot })
   }
 
-  // Проверка на reCAPTCHA
-  try {
-    const resp = await axios.post(
-      'https://www.google.com/recaptcha/api/siteverify',
-      null,
-      {
-        params: {
-          secret  : process.env.RECAPTCHA_SECRET,
-          response: captcha,
-          remoteip: req.ip
-        }
-      }
-    )
-    if (!resp.data.success) throw new Error('reCAPTCHA failed')
-  } catch {
-    return res.render('register', {
-      error           : 'Грешка при валидация на reCAPTCHA',
-      values          : { username, telegram },
-      recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY
-    })
-  }
-
-  // Запис в БД
-  try {
-    const hash = await bcrypt.hash(password, 10)
-    db.run(
-      `INSERT INTO users (username, password, telegram_username)
-       VALUES (?, ?, ?)`,
-      [username, hash, telegram || null],
-      err => {
-        if (err) {
-          return res.render('register', {
-            error           : 'Потребителското име вече съществува',
-            values          : { username, telegram },
-            recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY
-          })
-        }
-        res.redirect('/login?registered=1')
-      }
-    )
-  } catch {
-    res.render('register', {
-      error           : 'Вътрешна грешка при регистрация',
-      values          : { username, telegram },
-      recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY
-    })
-  }
-})
-
-// 7.3. Вход (Login)
-app.get('/login', (req, res) => {
-  res.render('login', {
-    error           : null,
-    success         : req.query.registered === '1',
-    recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY
-  })
-})
-
-app.post('/login', async (req, res) => {
-  const { username, password, 'g-recaptcha-response': captcha } = req.body
-
-  if (!username || !password) {
-    return res.render('login', {
-      error           : 'Всички полета са задължителни',
-      success         : false,
-      recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY
-    })
-  }
-  if (!captcha) {
-    return res.render('login', {
-      error           : 'Маркирай "Не съм робот"',
-      success         : false,
-      recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY
-    })
-  }
-
-  // reCAPTCHA проверка
-  try {
-    const resp = await axios.post(
-      'https://www.google.com/recaptcha/api/siteverify',
-      null,
-      {
-        params: {
-          secret  : process.env.RECAPTCHA_SECRET,
-          response: captcha,
-          remoteip: req.ip
-        }
-      }
-    )
-    if (!resp.data.success) throw new Error('reCAPTCHA failed')
-  } catch {
-    return res.render('login', {
-      error           : 'Грешка при валидация на reCAPTCHA',
-      success         : false,
-      recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY
-    })
-  }
-
-  // Проверка на креденшъли
+  // Проверка дали има такъв потребител
   db.get(
-    `SELECT * FROM users WHERE username = ?`,
+    'SELECT id FROM users WHERE username = ?',
     [username],
-    async (err, user) => {
-      if (err || !user || !(await bcrypt.compare(password, user.password))) {
-        return res.render('login', {
-          error           : 'Грешни потребителско име или парола',
-          success         : false,
-          recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY
-        })
-      }
-      const sessionId      = crypto.randomBytes(16).toString('hex')
-      sessions[sessionId]  = user
-      res.cookie('sessionId', sessionId, { httpOnly: true })
-      res.redirect('/')
-    }
-  )
-})
-
-// 7.4. Пазаруване
-app.post('/buy/:productId', requireAuth, async (req, res) => {
-  const userId    = req.user.id
-  const productId = parseInt(req.params.productId, 10)
-  const quantity  = Math.max(1, parseInt(req.body.quantity, 10) || 1)
-
-  db.get(
-    `SELECT * FROM products WHERE id = ? AND stock >= ?`,
-    [productId, quantity],
-    async (err, product) => {
-      if (err || !product) {
-        return res.status(400).json({ error: 'Product unavailable' })
+    async (err, row) => {
+      if (err) return res.status(500).send('Server error')
+      if (row) {
+        return res.render('register', { error: 'Потребителят вече съществува', values:{ username, telegram }, bot: res.locals.bot })
       }
 
-      const total     = product.price * quantity
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString()
-
+      const hash = await bcrypt.hash(password, 10)
       db.run(
-        `INSERT INTO orders (user_id, product_id, quantity, total_amount, expires_at)
-         VALUES (?, ?, ?, ?, ?)`,
-        [userId, productId, quantity, total, expiresAt],
-        async function (err) {
-          if (err) {
-            return res.status(500).json({ error: 'Order failed' })
-          }
-          const orderId = this.lastID
-
-          try {
-            const invoice = await createWolvPayInvoice(
-              orderId,
-              total,
-              'USD',
-              `Order #${orderId} – ${product.name}`,
-              req
-            )
-
-            db.run(
-              `UPDATE orders
-                 SET payment_id    = ?,
-                     crypto_address = ?,
-                     crypto_amount  = ?
-               WHERE id = ?`,
-              [invoice.paymentId, invoice.address, invoice.cryptoAmount, orderId]
-            )
-            db.run(
-              `UPDATE products
-                 SET stock = stock - ?
-               WHERE id = ?`,
-              [quantity, productId]
-            )
-
-            logPaymentEvent(orderId, 'created', invoice)
-
-            res.json({
-              success     : true,
-              paymentUrl  : invoice.paymentUrl,
-              address     : invoice.address,
-              cryptoAmount: invoice.cryptoAmount,
-              qrCode      : invoice.qrCode,
-              expiresAt
-            })
-          } catch (e) {
-            console.error('WolvPay error:', e)
-            res.status(500).json({ error: 'Invoice creation failed' })
-          }
+        'INSERT INTO users (username, password_hash, telegram) VALUES (?, ?, ?)',
+        [username, hash, telegram],
+        err => {
+          if (err) return res.status(500).send('Server error')
+          res.redirect('/login?registered=1')
         }
       )
     }
   )
 })
 
-// 7.5. Webhook WolvPay
+// GET /login – форма за вход
+app.get('/login', attachAntiBotParams, (req, res) => {
+  res.render('login', {
+    error  : null,
+    success: req.query.registered === '1',
+    bot    : res.locals.bot
+  })
+})
+
+// POST /login – влизане в системата
+app.post('/login', (req, res) => {
+  try {
+    validateFormBotProtection(req.body)
+  } catch (botErr) {
+    return res
+      .status(400)
+      .render('login', { error: botErr.message, success: false, bot: res.locals.bot })
+  }
+
+  const { username, password } = req.body
+  db.get(
+    'SELECT id, password_hash FROM users WHERE username = ?',
+    [username],
+    async (err, user) => {
+      if (err) return res.status(500).send('Server error')
+      if (!user) {
+        return res.render('login', { error: 'Невалидни данни', success: false, bot: res.locals.bot })
+      }
+
+      const match = await bcrypt.compare(password, user.password_hash)
+      if (!match) {
+        return res.render('login', { error: 'Невалидни данни', success: false, bot: res.locals.bot })
+      }
+
+      // Генерираме сесия
+      const token = crypto.randomBytes(16).toString('hex')
+      db.run('INSERT INTO sessions (user_id, token) VALUES (?, ?)', [user.id, token], err => {
+        if (err) return res.status(500).send('Server error')
+        res.cookie('session', token, { signed: true, httpOnly: true })
+        res.redirect('/products')
+      })
+    }
+  )
+})
+
+// GET /logout – затвори сесията
+app.get('/logout', (req, res) => {
+  const sessionToken = req.signedCookies.session
+  if (sessionToken) {
+    db.run('DELETE FROM sessions WHERE token = ?', [sessionToken])
+    res.clearCookie('session')
+  }
+  res.redirect('/login')
+})
+
+// —————————————————————————————
+// Routes: Protected
+// —————————————————————————————
+
+// GET /products – списък продукти
+app.get('/products', requireAuth, (req, res) => {
+  db.all('SELECT * FROM products', (err, products) => {
+    if (err) return res.status(500).send('Server error')
+    res.render('products', { products, user: req.user })
+  })
+})
+
+// GET /buy – започни плащане
+app.get('/buy', requireAuth, async (req, res) => {
+  const id = parseInt(req.query.id, 10)
+  db.get('SELECT * FROM products WHERE id = ?', [id], async (err, product) => {
+    if (err || !product) {
+      return res.status(404).send('Product not found')
+    }
+
+    // Създаване на инвойс в WolvPay
+    try {
+      const resp = await axios.post(
+        'https://api.wolvpay.com/v1/invoice',
+        {
+          amount     : product.price,
+          currency   : product.currency,
+          description: product.name,
+          order_id   : crypto.randomBytes(8).toString('hex'),
+          callback_url: `${req.protocol}://${req.get('host')}/webhook/wolvpay`
+        },
+        { headers: { 'Authorization': `Bearer ${CRYPTO_CONFIG.wolvpay.apiKey}` } }
+      )
+
+      const { invoice_id, payment_url } = resp.data
+      // Записваме поръчката
+      db.run(
+        `INSERT INTO orders
+           (user_id, product_id, payment_id, payment_status, created_at)
+         VALUES (?, ?, ?, 'pending', CURRENT_TIMESTAMP)`,
+        [req.user.id, product.id, invoice_id],
+        () => {
+          res.redirect(payment_url)
+        }
+      )
+    } catch (e) {
+      console.error(e)
+      res.status(500).send('Payment initialization failed')
+    }
+  })
+})
+
+// —————————————————————————————
+// Webhook & Success
+// —————————————————————————————
+
+// WolvPay webhook
 app.post('/webhook/wolvpay', express.json(), (req, res) => {
   const signature = req.headers['x-wolvpay-signature'] || ''
   const expected  = crypto
@@ -399,18 +314,17 @@ app.post('/webhook/wolvpay', express.json(), (req, res) => {
     db.run(
       `UPDATE orders
          SET payment_status = 'completed',
-             tx_hash        = ?,
-             updated_at     = CURRENT_TIMESTAMP
+             tx_hash       = ?,
+             updated_at    = CURRENT_TIMESTAMP
        WHERE payment_id = ?`,
       [txID, invoice_id]
     )
-    logPaymentEvent(invoice_id, 'completed', req.body)
+    console.log(`✅ Payment completed for invoice ${invoice_id}`)
   }
-
   res.json({ success: true })
 })
 
-// 7.6. Страница за успех
+// Страница за успех
 app.get('/payment-success', requireAuth, (req, res) => {
   const orderId = parseInt(req.query.order, 10)
   db.get(
@@ -428,17 +342,22 @@ app.get('/payment-success', requireAuth, (req, res) => {
   )
 })
 
-// 8. 404 & Error handlers
+// —————————————————————————————
+// 404 & Error handlers
+// —————————————————————————————
+
 app.use((req, res) => {
   res.status(404).render('404', { url: req.originalUrl })
 })
-
 app.use((err, req, res, next) => {
   console.error(err.stack)
   res.status(500).send('Server error')
 })
 
-// 9. Стартиране на сървъра
+// —————————————————————————————
+// Стартиране на сървъра
+// —————————————————————————————
+
 app.listen(port, () => {
   console.log(`🚀 Server listening on http://localhost:${port}`)
 })
