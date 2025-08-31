@@ -29,6 +29,9 @@
               <input type="number" name="stock" value="<%= p.stock %>" required />
               <input type="text" name="category" value="<%= p.category %>" />
               <button type="submit">💾 Запази</button>
+<form method="POST" action="/admin/product/delete/<%= product.id %>" onsubmit="return confirm('Сигурен ли си?')">
+  <button class="btn danger">🗑️ Изтрий</button>
+</form>
             </form>
           </td>
         </tr>
