@@ -676,6 +676,35 @@ app.post('/admin/product/create', requireAdmin, (req, res) => {
     }
   );
 });
+app.post('/buy/:id', (req, res) => {
+  const productId = req.params.id;
+  const { quantity, provider, currency } = req.body;
+
+  db.get(`SELECT * FROM products WHERE id = ?`, [productId], (err, product) => {
+    if (err || !product) return res.json({ success: false, error: 'Продуктът не е намерен' });
+
+    const totalAmount = product.price * quantity;
+    const paymentId = Date.now().toString();
+
+    let paymentUrl = '';
+    if (provider === 'oxapay') {
+      paymentUrl = `https://oxapay.com/invoice?amount=${totalAmount}&merchant=${CRYPTO_CONFIG.oxapay.merchantKey}&paymentId=${paymentId}&currency=${currency}`;
+    } else if (provider === 'wolvpay') {
+      paymentUrl = `https://wolvpay.com/invoice?amount=${totalAmount}&merchant=${CRYPTO_CONFIG.wolvpay.merchantKey}&paymentId=${paymentId}&currency=${currency}`;
+    } else {
+      return res.json({ success: false, error: 'Невалиден доставчик' });
+    }
+
+    res.json({
+      success: true,
+      paymentId,
+      cryptoAmount: totalAmount.toFixed(2),
+      cryptoCurrency: currency,
+      address: '123abc456def789',
+      paymentUrl
+    });
+  });
+});
 
 app.get('/health', (req, res) => {
     res.json({
