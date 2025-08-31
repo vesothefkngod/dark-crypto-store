@@ -1,39 +1,19 @@
-<!DOCTYPE html>
-<html lang="bg">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Login | TumnataMreja</title>
-  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-  <link rel="stylesheet" href="/css/style.css" />
-</head>
-<body>
-  <div class="container auth-page">
-    <h1>🔒 LOGIN</h1>
+<form action="/login" method="POST">
+  <label>Потребителско име</label>
+  <input type="text" name="username" required />
 
-    <% if (success) { %>
-      <div class="alert alert-success">
-        ✅ Регистрацията е успешна, влез с новите си данни.
-      </div>
-    <% } %>
+  <label>Парола</label>
+  <input type="password" name="password" required />
 
-    <% if (error) { %>
-      <div class="alert alert-error"><%= error %></div>
-    <% } %>
-
-    <form action="/login" method="POST">
-      <label>Потребителско име</label>
-      <input type="text" name="username" required />
-
-      <label>Парола</label>
-      <input type="password" name="password" required />
-
-      <div class="g-recaptcha" data-sitekey="<%= recaptchaSiteKey %>"></div>
-
-      <button type="submit" class="btn">Влез</button>
-    </form>
-
-    <p>Нямаш акаунт? <a href="/register">➕ Регистрация</a></p>
+  <!-- Honeypot поле -->
+  <div style="display:none">
+    <label>Website</label>
+    <input type="text" name="website" value="" />
   </div>
-</body>
-</html>
+
+  <!-- Анти-бот параметри -->
+  <input type="hidden" name="startTime" value="<%= bot.startTime %>" />
+  <input type="hidden" name="formSig"   value="<%= bot.formSig %>" />
+
+  <button type="submit" class="btn">Вход</button>
+</form>
