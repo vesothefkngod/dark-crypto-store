@@ -285,51 +285,62 @@ async function createWolvPayPayment(orderId, amount, currency, productName, req)
 }
 
 // Webhook за WolvPay
-app.post('/webhook/wolvpay', (req, res) => {
-  const sig = req.headers['x-wolvpay-signature'];
-  const expected = crypto
-    .createHmac('sha256', CRYPTO_CONFIG.wolvpay.webhookSecret)
-    .update(JSON.stringify(req.body))
-    .digest('hex');
+app.post(
+  '/webhook/wolvpay',
+  express.json(),           // парсираме JSON телата на заявките
+  (req, res) => {
+    const sig = req.headers['x-wolvpay-signature'];
+    const expected = crypto
+      .createHmac('sha256', CRYPTO_CONFIG.wolvpay.webhookSecret)
+      .update(JSON.stringify(req.body))
+      .digest('hex');
 
-  if (sig !== expected) {
-    return res.status(401).send('Invalid signature');
+    if (sig !== expected) {
+      return res.status(401).send('Invalid signature');
+    }
+
+    const { invoice_id, status, txID } = req.body;
+
+    if (status.toLowerCase() === 'completed') {
+      db.run(
+        `UPDATE orders
+           SET payment_status = 'completed',
+               tx_hash = ?,
+               updated_at = CURRENT_TIMESTAMP
+         WHERE payment_id = ?`,
+        [txID, invoice_id]
+      );
+      logPaymentEvent(invoice_id, 'completed', req.body);
+    }
+
+    return res.json({ success: true });
   }
-
-  const { invoice_id, status, txID } = req.body;
-
-  if (status.toLowerCase() === 'completed') {
-    db.run(
-      `UPDATE orders
-       SET payment_status = 'completed',
-           tx_hash = ?,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE payment_id = ?`,
-      [txID, invoice_id]
-    );
-    logPaymentEvent(invoice_id, 'completed', req.body);
-  }
-
-  res.json({ success: true });
-});
+);  // ← затваряме app.post('/webhook')
 
 // Страница след успешно плащане
-app.get('/payment-success', (req, res) => {
-  const orderId = req.query.order;
+app.get('/payment-success', requireAuth, (req, res) => {
+  const orderId = parseInt(req.query.order, 10);
+
   db.get(
-    `SELECT o.*, p.name AS product_name, u.username
+    `SELECT 
+       o.*, 
+       p.name AS product_name,
+       u.username
      FROM orders o
      JOIN products p ON o.product_id = p.id
-     JOIN users u ON o.user_id = u.id
-     WHERE o.id = ?`,
-    [orderId],
+     JOIN users u    ON o.user_id    = u.id
+     WHERE o.id = ? AND o.user_id = ?`,
+    [orderId, req.user.id],
     (err, order) => {
+      if (err || !order) {
+        return res.status(404).send('Поръчката не е намерена');
+      }
       res.render('success', { order });
     }
   );
-});
+});  // ← затваряме app.get('/payment-success')
 
 // Стартиране на сървъра
 app.listen(port, () => {
   console.log(`🚀 Server listening on http://localhost:${port}`);
-});
+}); 
