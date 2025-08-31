@@ -2,10 +2,48 @@
 <html lang="bg">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Вход | TumnataMreja</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TumnataMreja – Market</title>
   <link rel="stylesheet" href="/css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,...
+    <!-- (твоя data-URI за иконата) -->
+  " />
 </head>
+<body>
+  <!-- Matrix background -->
+  <div class="matrix-bg" id="matrixBg"></div>
+
+  <!-- HEADER / NAV -->
+  <header>
+    <nav class="container">
+      <div class="logo glitch" data-text="">
+        <img
+          src="https://i.postimg.cc/nL66r5Kh/logo.png"
+          alt="logo"
+          class="logo-img"
+        />
+        <div class="logo-text"></div>
+      </div>
+      <div class="nav-links">
+        <a href="/">НАЧАЛО</a>
+
+        <% if (user) { %>
+          <a href="/dashboard">СИСТЕМА</a>
+          <a href="/logout">ИЗХОД</a>
+          <span
+            class="user-badge"
+            style="color:#00ff00; border:1px solid #00ff00; padding:0.3rem 0.8rem;"
+          >
+            USER: <%= user.username.toUpperCase() %>
+          </span>
+        <% } else { %>
+          <a href="/login">🔒 LOGIN</a>
+          <a href="/register" class="btn">➕ REGISTER</a>
+        <% } %>
+      </div>
+    </nav>
+  </header>
+
 <body>
   <div class="container auth-page">
     <h1>🔒 LOGIN</h1>
