@@ -52,6 +52,34 @@ app.set('view engine', 'ejs');
 // Инициализация на базата данни
 const db = new sqlite3.Database('store.sqlite');
 db.serialize(() => {
+    const stmt = db.prepare(`
+    INSERT INTO products (name, description, price, image, stock)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+
+  stmt.run(
+    '❄️FLEX (1гр) Bolivia',
+    'ВИСОКО КАЧЕСТВО НА ЧИСТОТА - ВНОС БОЛИВИЯ',
+    129.99,
+    'https://i.postimg.cc/BQmK5C13/OIP.png',
+    100
+  );
+   stmt.run(
+    '🧊 CR7 (1гр.) ULTRA M3TH',
+    'НАЙ-ВИСОКОТО КАЧЕСТВО НА ПАЗАРА - CR7 CRYSTAL METH',
+    99.99,
+    'https://i.postimg.cc/K8GMptqG/Designer.png',
+    100
+  );
+  stmt.run(
+    '🌳АК-47 (5гр.) HQUALITY',
+    'ВИСОКО КАЧЕСТВЕН КОЗ - СОРТ АК-47',
+    89.99,
+    'https://i.postimg.cc/DwwSPn0m/deyne03x.png',
+    100
+  );
+  stmt.finalize();
+});
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
