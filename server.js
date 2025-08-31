@@ -45,60 +45,63 @@ app.set('view engine', 'ejs');
 
 // Initialize enhanced database
 db.serialize(() => {
-    // Users table
-    db.run(`CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        email TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
+   db.serialize(() => {
+  db.run(`CREATE TABLE IF NOT EXISTS pages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT UNIQUE,
+    content TEXT
+  )`);
 
-    // Enhanced Products table
-    db.run(`CREATE TABLE IF NOT EXISTS products (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        description TEXT,
-        price REAL NOT NULL,
-        image TEXT,
-        category TEXT DEFAULT 'general',
-        stock INTEGER DEFAULT 100,
-        featured BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
+  db.run(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    email TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
 
-    // Enhanced Orders table
-    db.run(`CREATE TABLE IF NOT EXISTS orders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        product_id INTEGER,
-        quantity INTEGER DEFAULT 1,
-        total_amount REAL NOT NULL,
-        usd_amount REAL NOT NULL,
-        payment_provider TEXT DEFAULT 'oxapay',
-        payment_status TEXT DEFAULT 'pending',
-        payment_id TEXT,
-        crypto_currency TEXT,
-        crypto_address TEXT,
-        crypto_amount TEXT,
-        tx_hash TEXT,
-        expires_at DATETIME,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(user_id) REFERENCES users(id),
-        FOREIGN KEY(product_id) REFERENCES products(id)
-    )`);
+  db.run(`CREATE TABLE IF NOT EXISTS products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    price REAL NOT NULL,
+    image TEXT,
+    category TEXT DEFAULT 'general',
+    stock INTEGER DEFAULT 100,
+    featured BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
 
-    // Payment logs table
-    db.run(`CREATE TABLE IF NOT EXISTS payment_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        order_id INTEGER,
-        provider TEXT,
-        event_type TEXT,
-        data TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(order_id) REFERENCES orders(id)
-    )`);
+  db.run(`CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    product_id INTEGER,
+    quantity INTEGER DEFAULT 1,
+    total_amount REAL NOT NULL,
+    usd_amount REAL NOT NULL,
+    payment_provider TEXT DEFAULT 'oxapay',
+    payment_status TEXT DEFAULT 'pending',
+    payment_id TEXT,
+    crypto_currency TEXT,
+    crypto_address TEXT,
+    crypto_amount TEXT,
+    tx_hash TEXT,
+    expires_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id),
+    FOREIGN KEY(product_id) REFERENCES products(id)
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS payment_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER,
+    provider TEXT,
+    event_type TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(order_id) REFERENCES orders(id)
+  )`);
+});
 
     // Add sample products if none exist
     db.get("SELECT COUNT(*) as count FROM products", (err, row) => {
