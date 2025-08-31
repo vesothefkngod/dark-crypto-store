@@ -3,47 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Вход | Dark Crypto Store</title>
+  <title>Вход | TumnataMreja</title>
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
   <div class="container auth-page">
+    <h1>🔒 LOGIN</h1>
+
+    <% if (success) { %>
+      <div class="alert alert-success">
+        Успешна регистрация! Моля впишете се.
+      </div>
+    <% } %>
 
     <% if (error) { %>
       <div class="alert alert-error"><%= error %></div>
     <% } %>
 
-    <% if (success) { %>
-      <div class="alert alert-success">
-        Регистрацията бе успешна! Моля влезте.
-      </div>
-    <% } %>
-
     <form action="/login" method="POST" class="auth-form">
-      <h2>Вход</h2>
-
       <label>Потребителско име</label>
-      <input type="text" name="username" required />
+      <input type="text" name="username" required/>
 
       <label>Парола</label>
-      <input type="password" name="password" required />
-
-      <!-- Honeypot поле (скрито) -->
-      <div style="display:none">
-        <label>Website</label>
-        <input type="text" name="website" value="" />
-      </div>
-
-      <!-- Анти-бот параметри -->
-      <input type="hidden" name="startTime" value="<%= bot.startTime %>" />
-      <input type="hidden" name="formSig"   value="<%= bot.formSig   %>" />
+      <input type="password" name="password" required/>
 
       <button type="submit">Вход</button>
     </form>
 
-    <p class="switch-link">
-      Нямате акаунт? <a href="/register">Регистрация</a>
-    </p>
+    <p>Нямате акаунт? <a href="/register">Регистрация</a></p>
   </div>
 </body>
 </html>
