@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TumnataMreja – Market</title>
   <link rel="stylesheet" href="/css/style.css" />
-  <link rel="icon" href="data:image/svg+xml,...
-    <!-- (твоя data-URI за иконата) -->
-  " />
+  <link rel="icon" href="data:image/svg+xml,... (твоя data-URI за иконата)" />
 </head>
 <body>
   <!-- Matrix background -->
@@ -15,91 +13,81 @@
 
   <!-- HEADER / NAV -->
   <header>
-    <nav class="container">
+    <nav class="container nav-bar">
       <div class="logo glitch" data-text="">
         <img
           src="https://i.postimg.cc/nL66r5Kh/logo.png"
           alt="logo"
           class="logo-img"
         />
-        <div class="logo-text"></div>
       </div>
       <div class="nav-links">
         <a href="/">НАЧАЛО</a>
-
         <% if (user) { %>
           <a href="/dashboard">СИСТЕМА</a>
           <a href="/logout">ИЗХОД</a>
-          <span
-            class="user-badge"
-            style="color:#00ff00; border:1px solid #00ff00; padding:0.3rem 0.8rem;"
-          >
+          <span class="user-badge">
             USER: <%= user.username.toUpperCase() %>
           </span>
         <% } else { %>
           <a href="/login">🔒 LOGIN</a>
-          <a href="/register" class="btn">➕ REGISTER</a>
+          <a href="/register" class="btn register-btn">➕ REGISTER</a>
         <% } %>
       </div>
     </nav>
   </header>
 
   <!-- MAIN -->
-  <main class="container">
-    <section class="products-section">
-      <div class="container">
-
-        <!-- Ако не е логнат – препоръка за регистрация -->
-        <% if (!user) { %>
-          <div class="auth-prompt">
-            <h1>⚠️ РЕГИСТРИРАЙ СЕ – NO KYC ⚠️</h1>
-            <p>Необходимо е да имаш регистрация, за да разглеждаш и купуваш.</p>
-            <div class="auth-buttons">
-              <a href="/login" class="btn-auth">🔒 LOGIN</a>
-              <a href="/register" class="btn-auth">➕ REGISTER</a>
-            </div>
-          </div>
-        <% } %>
-
-        <!-- Заглавие -->
-         <h1>📖 ПРОДУКТИ</h1>
-    <div class="products-grid">
-      <% products.forEach(p => { %>
-        <div class="product-card">
-          <img src="<%= p.image %>" alt="<%= p.name %>" width="120"/>
-          <h3><%= p.name %></h3>
-          <p><%= p.description %></p>
-          <p><%= p.price.toFixed(2) %> лв.</p>
-          <% if (user) { %>
-            <form action="/buy/<%= p.id %>" method="POST">
-              <input type="number" name="quantity" value="1" min="1" style="width:40px"/>
-              <button type="submit">🛒 Купи</button>
-            </form>
-          <% } else { %>
-            <button onclick="alert('Моля влезте, за да купувате')">🔒</button>
-          <% } %>
+  <main class="container main-content">
+    <!-- Auth prompt -->
+    <% if (!user) { %>
+      <section class="auth-prompt">
+        <h1>⚠️ РЕГИСТРИРАЙ СЕ – NO KYC ⚠️</h1>
+        <p>Необходимо е да имаш регистрация, за да разглеждаш и купуваш.</p>
+        <div class="auth-buttons">
+          <a href="/login" class="btn">🔒 LOGIN</a>
+          <a href="/register" class="btn">➕ REGISTER</a>
         </div>
-      <% }) %>
-    </div>
+      </section>
+    <% } %>
+
+    <!-- Product list -->
+    <section class="products-section">
+      <h1 class="section-title">📖 ПРОДУКТИ</h1>
+      <div class="products-grid">
+        <% products.forEach(p => { %>
+          <div class="product-card">
+            <img src="<%= p.image %>" alt="<%= p.name %>" />
+            <h3><%= p.name %></h3>
+            <p class="desc"><%= p.description %></p>
+            <p class="price"><%= p.price.toFixed(2) %> лв.</p>
+            <% if (user) { %>
+              <form action="/buy/<%= p.id %>" method="POST" class="buy-form">
+                <input type="number" name="quantity" value="1" min="1" />
+                <button type="submit">🛒 Купи</button>
+              </form>
+            <% } else { %>
+              <button class="btn disabled" onclick="alert('Моля влезте, за да купувате')">
+                🔒
+              </button>
+            <% } %>
+          </div>
+        <% }) %>
       </div>
     </section>
 
     <!-- HERO / BANNER -->
-    <section class="hero">
-      <div class="container">
-        <center>
-          <img
-            src="https://i.postimg.cc/zX8YT9sL/banner.png"
-            alt="banner"
-            style="border:0;"
-          />
-        </center>
-        <div class="hero-features">
-          <div class="feature-badge">🔒 ANONYMOUS</div>
-          <div class="feature-badge">⚡ НЕЗАБАВНО</div>
-          <div class="feature-badge">💀 UNTRACEABLE</div>
-          <div class="feature-badge">🌐 24/7 ONLINE</div>
-        </div>
+    <section class="hero-section">
+      <img
+        src="https://i.postimg.cc/zX8YT9sL/banner.png"
+        alt="banner"
+        class="hero-banner"
+      />
+      <div class="hero-features">
+        <span>🔒 ANONYMOUS</span>
+        <span>⚡ НЕЗАБАВНО</span>
+        <span>💀 UNTRACEABLE</span>
+        <span>🌐 24/7 ONLINE</span>
       </div>
     </section>
   </main>
@@ -123,34 +111,37 @@
       matrixBg.appendChild(canvas);
       const chars = '01';
       const fontSize = 10;
-      const columns = canvas.width / fontSize;
-      const drops = Array(columns).fill(1);
+      const columns = Math.floor(canvas.width / fontSize);
+      const drops = Array(columns).fill(0);
+
       function draw() {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#00ff00';
         ctx.font = fontSize + 'px monospace';
+
         drops.forEach((y, i) => {
           const text = chars[Math.floor(Math.random() * chars.length)];
           ctx.fillText(text, i * fontSize, y * fontSize);
-          if (y * fontSize > canvas.height && Math.random() > 0.975) {
-            drops[i] = 0;
-          }
-          drops[i]++;
+          drops[i] = y * fontSize > canvas.height && Math.random() > 0.975
+            ? 0
+            : y + 1;
         });
       }
+
       setInterval(draw, 50);
     }
+
     window.addEventListener('load', createMatrix);
 
-    // Glitch effect for headings
+    // Glitch effect
     setInterval(() => {
       document.querySelectorAll('.glitch').forEach(el => {
         if (Math.random() > 0.9) {
           el.style.animation = 'none';
           setTimeout(() => {
             el.style.animation = 'glitch 0.3s linear';
-          }, 10);
+          }, 20);
         }
       });
     }, 2000);
