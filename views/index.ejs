@@ -368,5 +368,41 @@ async function processPurchase() {
             });
         }, 2000);
     </script>
+<script>
+  let currentProductId = null;
+  let currentProductPrice = null;
+
+  function openPurchaseModal(productId, productName, price) {
+    currentProductId = productId;
+    currentProductPrice = price;
+
+    document.getElementById('modalProductNameDisplay').textContent = productName;
+    document.getElementById('modalQuantity').value = 1;
+    document.getElementById('modalTotal').value = price.toFixed(2);
+
+    document.getElementById('purchaseModal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closePurchaseModal() {
+    document.getElementById('purchaseModal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+  }
+</script>
+<!-- 🛒 Purchase Modal -->
+<div id="purchaseModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <h2>🛍️ Purchase: <span id="modalProductNameDisplay"></span></h2>
+
+    <label for="modalQuantity">Quantity:</label>
+    <input type="number" id="modalQuantity" value="1" min="1" />
+
+    <label for="modalTotal">Total Price:</label>
+    <input type="text" id="modalTotal" readonly />
+
+    <button onclick="initializePayment()">🚀 INITIALIZE PAYMENT</button>
+    <button onclick="closePurchaseModal()">❌ CANCEL</button>
+  </div>
+</div>
 </body>
 </html>
