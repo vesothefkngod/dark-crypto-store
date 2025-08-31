@@ -13,6 +13,15 @@ const port = process.env.PORT || 3000;
 // Database setup
 const db = new sqlite3.Database('store.sqlite');
 
+// Създаване на таблици
+db.run(`CREATE TABLE IF NOT EXISTS products (...)`);
+db.run(`CREATE TABLE IF NOT EXISTS orders (...)`);
+db.run(`CREATE TABLE IF NOT EXISTS pages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug TEXT UNIQUE,
+  content TEXT
+)`);
+
 // Enhanced API Configuration - твоите ключове + новите
 const CRYPTO_CONFIG = {
     oxapay: {
@@ -703,6 +712,58 @@ app.post('/buy/:id', (req, res) => {
       address: '123abc456def789',
       paymentUrl
     });
+  });
+});
+app.post('/admin/product/delete/:id', requireAdmin, (req, res) => {
+  const productId = req.params.id;
+
+  db.run(`DELETE FROM products WHERE id = ?`, [productId], (err) => {
+    if (err) {
+      console.error('❌ Грешка при изтриване:', err.message);
+      return res.status(500).send('Грешка при изтриване');
+    }
+    res.redirect('/admin/dashboard');
+  });
+});
+app.get('/admin/product/edit/:id', requireAdmin, (req, res) => {
+  const productId = req.params.id;
+  db.get(`SELECT * FROM products WHERE id = ?`, [productId], (err, product) => {
+    if (err || !product) return res.status(404).send('Продуктът не е намерен');
+    res.render('edit_product', { product });
+  });
+});
+
+app.post('/admin/product/edit/:id', requireAdmin, (req, res) => {
+  const { name, description, price, stock, category, image, featured } = req.body;
+  const productId = req.params.id;
+
+  db.run(
+    `UPDATE products SET name = ?, description = ?, price = ?, stock = ?, category = ?, image = ?, featured = ? WHERE id = ?`,
+    [name, description, price, stock, category, image, featured ? 1 : 0, productId],
+    (err) => {
+      if (err) return res.status(500).send('Грешка при редактиране');
+      res.redirect('/admin/dashboard');
+    }
+  );
+});
+app.get('/admin/page/create', requireAdmin, (req, res) => {
+  res.render('create_page');
+});
+
+app.post('/admin/page/create', requireAdmin, (req, res) => {
+  const { slug, content } = req.body;
+
+  db.run(`INSERT INTO pages (slug, content) VALUES (?, ?)`, [slug, content], (err) => {
+    if (err) return res.status(500).send('Грешка при създаване на страница');
+    res.redirect(`/page/${slug}`);
+  });
+});
+
+app.get('/page/:slug', (req, res) => {
+  const slug = req.params.slug;
+  db.get(`SELECT * FROM pages WHERE slug = ?`, [slug], (err, page) => {
+    if (err || !page) return res.status(404).send('Страницата не е намерена');
+    res.send(page.content); // директно рендерира HTML
   });
 });
 
