@@ -214,6 +214,7 @@ app.post('/buy/:productId', requireAuth, async (req, res) => {
           }
 
           const orderId = this.lastID;
+          async function createWolvPayPayment(orderId, amount, currency, productName, req) {
           try {
             // 3. Създай фактура в WolvPay
             const invoice = await createWolvPayInvoice(
@@ -254,10 +255,8 @@ app.post('/buy/:productId', requireAuth, async (req, res) => {
       );
     }
   );
-});
 
-// Функция за създаване на фактура в WolvPay
-async function createWolvPayPayment(orderId, amount, currency, productName, req) {
+  // Функция за създаване на фактура в WolvPay
   const data = {
     merchant: CRYPTO_CONFIG.wolvpay.merchantKey,
     invoiceValue: amount,
@@ -268,12 +267,7 @@ async function createWolvPayPayment(orderId, amount, currency, productName, req)
     lifetime: 30
   };
 
-  const resp = await axios.post(
-    `${CRYPTO_CONFIG.wolvpay.apiUrl}/invoice`,
-    data
-  );
-
-  // Примерно поле, настрой според документацията
+  const resp = await axios.post(`${CRYPTO_CONFIG.wolvpay.apiUrl}/invoice`, data);
   const inv = resp.data;
   return {
     paymentId: inv.invoiceId,
@@ -285,10 +279,7 @@ async function createWolvPayPayment(orderId, amount, currency, productName, req)
 }
 
 // Webhook за WolvPay
-app.post(
-  '/webhook/wolvpay',
-  express.json(),           // парсираме JSON телата на заявките
-  (req, res) => {
+app.post('/webhook/wolvpay', express.json(), (req, res) => {
     const sig = req.headers['x-wolvpay-signature'];
     const expected = crypto
       .createHmac('sha256', CRYPTO_CONFIG.wolvpay.webhookSecret)
@@ -314,8 +305,7 @@ app.post(
     }
 
     return res.json({ success: true });
-  }
-);  // ← затваряме app.post('/webhook')
+  });  // ← затваряме app.post('/webhook')
 
 // Страница след успешно плащане
 app.get('/payment-success', requireAuth, (req, res) => {
@@ -343,4 +333,4 @@ app.get('/payment-success', requireAuth, (req, res) => {
 // Стартиране на сървъра
 app.listen(port, () => {
   console.log(`🚀 Server listening on http://localhost:${port}`);
-}); 
+});
