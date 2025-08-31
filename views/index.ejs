@@ -87,20 +87,8 @@
         </section>
     </main>
 
-<% if (user) { %>
-  <% products.forEach(product => { %>
-    <form method="POST" action="/buy/<%= product.id %>">
-      <input type="number" name="quantity" value="1" min="1" max="10">
-      <select name="provider">
-        <option value="oxapay">OXAPAY</option>
-        <option value="wolvpay">WOLVPAY</option>
-      </select>
-      <button type="submit">💸 Плати</button>
-    </form>
-  <% }) %>
-<% } else { %>
-  <button onclick="alert('🔒 Моля, влезте в профила си за да направите поръчка')">🔒 Вход изисква се</button>
-<% } %>
+<button class="btn-buy" onclick="openPurchaseModal(...)"> 🛒 BUY NOW </button>
+
 
     <footer>
         <div class="container">
