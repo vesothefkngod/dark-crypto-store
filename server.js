@@ -83,11 +83,9 @@ db.serialize(() => {
     db.get("SELECT COUNT(*) as count FROM products", (err, row) => {
         if (!err && row.count === 0) {
             const products = [
-                ['💀 CR. RONALDO 7 (1гр.) ULTRA M3TH', 'High-grade digital product with instant delivery', 99.99, '/images/premium.jpg', 'premium', 50, 1],
-                ['🔫 АК-47 (5гр.) HIGH QUALITY', 'Professional grade product for serious users', 149.99, '/images/professional.jpg', 'professional', 30, 1],
-                ['⚡ ФЛЕКС (1гр) БОЛИВИЯ', 'Essential quality product with fast shipping', 79.99, '/images/standard.jpg', 'standard', 100, 0],
-                ['💎 SPECIAL COMBO DEAL', 'Best value package - limited time offer', 249.99, '/images/combo.jpg', 'combo', 20, 1],
-                ['🎯 VIP EXCLUSIVE', 'Ultra premium members only product', 399.99, '/images/vip.jpg', 'vip', 10, 1]
+                ['💎 CR7 (1гр.) ULTRA M3TH', 'ВИСОКА ЧИСТОТА ,НАЙ-ДОБРОТО НА ПАЗАРА CR7METH', 99.99, '/images/premium.jpg', 'premium', 50, 1],
+                ['☘️ АК-47 (5гр.) HQUALITY', 'ВИСОКО КАЧЕСТВЕНА ТРЕВА - СОРТ :: АК-47', 89.99, '/images/professional.jpg', 'professional', 30, 1],
+                ['❄️ FLEX (1гр) BOLIVIA', 'ВИСОКА ЧИСТОТА ,НАЙ-ДОБРОТО НА ПАЗАРА - ВНОС :: БОЛИВИЯ', 129.99, '/images/standard.jpg', 'standard', 100, 0],
             ];
             products.forEach(product => {
                 db.run("INSERT INTO products (name, description, price, image, category, stock, featured) VALUES (?, ?, ?, ?, ?, ?, ?)", product);
